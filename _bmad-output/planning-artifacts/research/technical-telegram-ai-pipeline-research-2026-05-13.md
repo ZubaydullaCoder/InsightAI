@@ -12,657 +12,506 @@ research_goals: |
   4. Identify any hard constraints that would change the MVP scope
 user_name: 'Zubaydulla'
 date: '2026-05-13'
+last_validation_update: '2026-05-17'
 web_research_enabled: true
-source_verification: true
+source_verification: partial-revalidation-required
 ---
 
 # Research Report: Technical — Telegram Bot API + AI Classification Pipeline
 
 **Date:** 2026-05-13  
+**Validation Patch:** 2026-05-17  
 **Author:** Zubaydulla  
 **Research Type:** Technical  
 **Project:** Mahalla Ovozi
 
 ---
 
+## 2026-05-17 Validation Patch — Important Correction
+
+This document remains a useful technical feasibility foundation, but the original version used overconfident wording in several areas. Treat the stack direction as valid, but do **not** treat exact model choice, AI pricing, Telegram setup behavior, or pre-filter thresholds as final until they are verified during Architecture/Implementation.
+
+### What remains directionally valid
+
+- Modular monolith is the correct architecture for a solo-developer pilot.
+- Telegram webhook intake is the correct production direction.
+- Message processing should be async: webhook → queue → DB → scheduled classifier worker.
+- PostgreSQL + Redis/BullMQ + Fastify + React/Next.js remains a coherent TypeScript-first stack.
+- 20-minute batch classification remains compatible with the product requirement.
+- Session-based auth remains appropriate for the internal dashboard.
+- Single VPS + Docker Compose remains acceptable for pilot deployment if backups/monitoring are implemented.
+
+### What must be revalidated before implementation
+
+| Area | Required validation |
+|---|---|
+| Gemini model choice | Re-check current Google AI model list, pricing, structured output support, Uzbek quality, latency, and availability. Do not hardcode Gemini 2.5 Flash as final without this check. |
+| Pricing | Recalculate cost from current official provider pricing immediately before implementation. Do not rely on stale May 2026 numbers. |
+| `@google/genai` syntax | Verify current SDK syntax for `responseMimeType`, `responseSchema`, and `thinkingConfig` against official docs and TypeScript types. |
+| BullMQ scheduler | Verify the exact BullMQ version and scheduler API (`upsertJobScheduler` vs repeatable job alternatives) during architecture/package selection. |
+| Telegram group behavior | Test privacy mode, admin status, re-add requirement, captions, forwarded messages, anonymous admins, edited messages, and supergroup behavior in a real test group. |
+| Pre-filter thresholds | Validate against real mahalla messages before finalizing. The original “zero false-negative risk” claim is removed. |
+
+---
+
 ## Research Overview
 
-This research validates the core technical feasibility of the Mahalla Ovozi MVP before PRD finalization. It focuses on two highest-risk unknowns: (1) Telegram Bot API constraints for group message capture, and (2) AI classification feasibility for Uzbek-language civic messages.
+This research validates the core technical feasibility of the Mahalla Ovozi MVP before PRD finalization. It focuses on two highest-risk unknowns:
+
+1. Telegram Bot API constraints for group message capture.
+2. AI classification feasibility for Uzbek-language civic messages.
+
+The corrected conclusion is: **the MVP is technically feasible, but several implementation details require current-source verification and real data testing before architecture is finalized.**
 
 ---
-
-## Technical Research Scope Confirmation
-
-**Research Topic:** Telegram Bot API + AI Message Classification Pipeline for Mahalla Ovozi  
-**Research Goals:**
-1. Validate Telegram Bot API group message access — permissions, rate limits, supergroup constraints
-2. Determine best AI model/approach for Uzbek-language civic signal classification — cost, latency, accuracy
-3. Understand feasible 20-min batch processing pipeline architecture patterns
-4. Identify hard constraints that would change the MVP scope
-
-**Technical Research Scope:**
-
-- Architecture Analysis — design patterns, frameworks, system architecture
-- Implementation Approaches — development methodologies, coding patterns
-- Technology Stack — languages, frameworks, tools, platforms
-- Integration Patterns — APIs, protocols, interoperability
-- Performance Considerations — scalability, optimization, patterns
-
-**Research Methodology:**
-
-- Current web data with rigorous source verification
-- Multi-source validation for critical technical claims
-- Confidence level framework for uncertain information
-- Comprehensive technical coverage with architecture-specific insights
-
-**Scope Confirmed:** 2026-05-13
-
----
-
-<!-- Content will be appended sequentially through research workflow steps -->
 
 ## Technology Stack Analysis
 
 ### Telegram Bot Frameworks
 
-**Primary options for production bot in a Node.js/TypeScript stack:**
+Primary options for a Node.js/TypeScript production bot:
 
 | Library | Language | Status | Best For |
 |---|---|---|---|
-| `grammY` | Node.js / TypeScript | ✅ Modern, recommended | New projects; excellent TS support, plugin ecosystem |
-| `Telegraf` | Node.js / TypeScript | ✅ Battle-tested | Existing large projects |
-| `python-telegram-bot` v20+ | Python | ✅ Production-ready | AI/ML heavy backends needing data libraries |
+| `grammY` | Node.js / TypeScript | Modern, strong TS support | New TypeScript bot projects |
+| `Telegraf` | Node.js / TypeScript | Battle-tested | Existing large Node bot projects |
+| `python-telegram-bot` | Python | Production-ready | Python-heavy ML/data stacks |
 
-**Recommendation for Mahalla Ovozi:** `grammY` (Node.js/TypeScript) aligns with the project's JS/TS stack. If the AI classification service is Python-only, a hybrid approach works: grammY bot → message queue → Python classifier worker.
+**Recommendation:** use `grammY` unless architecture later discovers a strong reason to split the stack. It aligns with the preferred TypeScript ecosystem and keeps the pilot simple.
 
-_Source: Community consensus, library documentation 2024–2025_
+---
 
-### Telegram Bot API — Critical Constraints Found
+## Telegram Bot API — Constraints and Validation Required
 
-> ⚠️ **These are hard constraints that directly affect the MVP design.**
+### Stable assumptions
 
-| Constraint | Detail | MVP Impact |
-|---|---|---|
-| **Privacy Mode (default ON)** | Bot only receives commands/mentions by default | **Must disable in @BotFather** OR promote bot to group admin. Must re-add bot to group after change. |
-| **No historical message access** | Bot only receives messages sent *after* it joins | Cannot retroactively classify past messages. Pilot must start fresh. |
-| **Update retention: 24 hours** | If bot goes offline >24h, updates are permanently lost | Need robust uptime / restart strategy; webhooks preferred |
-| **Polling: one instance only** | Multiple polling instances cause 409 Conflict errors | Must use webhooks for production (no multiple instances) |
-| **Supergroup rate limit (outbound)** | ~1 msg/sec to same chat, ~30 msg/sec across chats | Only relevant if bot sends replies; intake-only bot is unaffected |
-| **Webhook: 60s response timeout** | Server must respond 200 OK within 60s | Processing must be async — accept and queue, don't block |
+| Constraint | MVP Impact |
+|---|---|
+| No historical message access | The bot cannot classify messages sent before it joins/receives updates. Pilot data collection starts fresh. |
+| Webhook preferred for production | Production should not rely on long polling. Webhook intake fits uptime and deployment needs better. |
+| Webhook handler must be fast | The handler should acknowledge quickly and push work to queue/DB asynchronously. |
+| Outbound rate limits are mostly irrelevant | The MVP bot is passive and does not reply to residents. |
 
-**Recommended approach:** Webhook-based bot. On message receipt: immediately acknowledge (200 OK) and enqueue for async processing. Never block the webhook handler.
+### Must be tested in a real Telegram test group
 
-_Source: Telegram Bot API official docs, community research 2024–2025_
+| Topic | Why it matters |
+|---|---|
+| Privacy mode disabled vs admin promotion | The exact setup path must be confirmed before client pilot. |
+| Whether bot must be removed/re-added after privacy mode changes | This is operationally important and should be part of setup checklist only after testing. |
+| Captions and media messages | MVP may ignore media, but text captions may contain civic signals. Decide explicitly. |
+| Forwarded messages | May include useful reports or may create ownership/policy questions. |
+| Anonymous admins / hidden sender fields | Sender display assumptions must be tested. |
+| Edited messages | Decide whether edited text is ignored, updated, or stored as a new event. |
+| `my_chat_member` events | Needed for detecting bot removal/access loss. |
 
-### Update Delivery: Polling vs Webhooks
+**Implementation rule:** create a Telegram setup validation checklist before pilot launch. Do not rely only on written assumptions.
 
-| Method | Pros | Cons | Verdict |
-|---|---|---|---|
-| Long Polling | Simple setup, no public URL needed | Single instance only, higher latency, resource waste | Dev/testing only |
-| Webhooks | Near-instant delivery, scalable, efficient | Requires public HTTPS URL + SSL cert | **Production standard** |
+---
 
-**MVP decision:** Use webhooks in production. Use long polling in local development for simplicity.
-
-### Database and Storage Technologies
+## Database and Queue Technologies
 
 | Layer | Technology | Role |
 |---|---|---|
-| **Primary DB** | PostgreSQL | Signal message storage, district/mahalla/user data |
-| **Queue/Cache** | Redis | Message queue for incoming Telegram updates, batch job scheduling |
-| **Job Scheduler** | BullMQ (Node.js) | 20-min batch trigger, retry logic, failure tracking |
-| **Temp raw storage** | PostgreSQL table with TTL flag OR Redis queue | Hold unprocessed messages before classification |
+| Primary DB | PostgreSQL | Signal storage, district/mahalla/user data, batch health |
+| Queue/cache | Redis | BullMQ queue and scheduler backing store |
+| Job scheduler | BullMQ | 20-minute classifier trigger, retries, failures |
+| Temporary intake | PostgreSQL raw table | Durable unclassified message storage before classification |
 
-**BullMQ for 20-min batch:** Natively supports repeatable jobs at fixed intervals. Use `upsertJobScheduler` (v5.16.0+, the current recommended API): `queue.upsertJobScheduler('classification-batch', { every: 20 * 60 * 1000 }, { name: 'classify-batch' })`. The older `repeat: { every: ... }` option still works but is deprecated — avoid using it in new code. Built-in retry, failure handling, and visual monitoring (Bull Board). No external cron needed.
-
-_Source: BullMQ documentation, Redis official docs_
-
-### Cloud Infrastructure and Deployment
-
-For a pilot-scale deployment (1 district, 3–5 groups):
-
-| Component | Option A (Simple) | Option B (Scalable) |
-|---|---|---|
-| **Hosting** | Single VPS (Hetzner/DigitalOcean, ~$6–12/mo) | Docker containers on managed platform |
-| **Bot service** | Node.js process with webhook | Same, containerized |
-| **Queue** | Redis on same VPS | Redis managed (Upstash for low cost) |
-| **DB** | PostgreSQL on same VPS | Managed PostgreSQL (Supabase free tier feasible for pilot) |
-| **SSL/HTTPS** | Nginx + Let's Encrypt (free) | Cloudflare tunnel (zero-config SSL) |
-
-**Recommendation for MVP/pilot:** Single VPS with Docker Compose. Simple, low-cost, sufficient for 3–5 groups. Migrate to managed services post-pilot if needed.
-
-### AI Classification — Technology Options
-
-| Model | Input Cost/1M tokens | Output Cost/1M tokens | Uzbek Support | Speed | Selected |
-|---|---|---|---|---|---|
-| **Gemini 2.5 Flash** (non-thinking) | $0.30 | $2.50 | ✅ Official support | Very fast | ✅ **Primary** |
-| GPT-4o-mini | $0.15 | $0.60 | ✅ Good (multilingual) | Fast | Fallback / alternative |
-| Claude Haiku 3.5 | ~$0.25 | ~$1.25 | ✅ Good | Very fast | Not selected |
-| Gemini 2.0 Flash | ~$0.10 | ~$0.40 | ✅ Official Uzbek support | Very fast | Superseded by 2.5 Flash |
-| Local model (Llama 3.1) | Compute only | Compute only | ⚠️ Variable | Depends on GPU | Not selected |
-
-**Why Gemini 2.5 Flash (chosen for fidelity, not cost):**
-
-| Factor | GPT-4o-mini | Gemini 2.5 Flash |
-|---|---|---|
-| Input cost / 1M | $0.15 ✅ cheaper | $0.30 |
-| Output cost / 1M | $0.60 ✅ cheaper | $2.50 |
-| Uzbek support | ✅ Good (multilingual) | ✅ **Official** |
-| JSON structured output | ✅ via `response_format` | ✅ via native `responseSchema` |
-
-**Verified cost comparison at Mahalla Ovozi pilot volume (500 msg/day, 350 input + 50 output tokens/msg):**
-- GPT-4o-mini: ~**$1.23/month** (5× traffic: ~$6.15/month)
-- Gemini 2.5 Flash: ~**$3.47/month** (5× traffic: ~$17/month)
-- **Delta: Gemini is 2.8× more expensive overall** — an extra ~$2.24/month at pilot scale
-
-**Decision rationale:** Gemini 2.5 Flash is selected **despite the higher cost** because:
-1. Official Uzbek language support reduces prompt engineering burden for Cyrillic/Latin/Russian mixed-script text
-2. At pilot scale the absolute cost delta (~$2.24/month) is negligible
-3. GPT-4o-mini remains a viable **cost-driven fallback** if Gemini accuracy proves insufficient or pricing rises further
-
-> ✅ `thinkingBudget: 0` confirmed to prevent thinking tokens from being generated — no hidden billing. Pricing verified May 2026. Re-verify at [ai.google.dev/pricing](https://ai.google.dev/pricing) before implementation.
-
-_Source: Google AI pricing page (2025), community benchmarks_
-
-### Uzbek Language AI Support
-
-| Aspect | Status | Detail |
-|---|---|---|
-| **Gemini 2.5 Flash Uzbek** | ✅ Official support | Google officially supports Uzbek in Gemini; handles Cyrillic, Latin, and Russian mixed-script text |
-| **Script mixing** | ⚠️ Common challenge | Mahalla groups mix Uzbek Cyrillic, Latin, and Russian — Gemini handles this but prompt guidance helps |
-| **Domain terminology** | ⚠️ Needs prompt engineering | Civic/government terms (mahalla, hokimiyat, gaz, suv) need few-shot examples in the system prompt |
-| **Classification accuracy** | ✅ Feasible | Short civic messages are structurally simple; binary signal/ignore + 4-category + 4-tone classification is well within LLM capability |
-| **Thinking mode** | ✅ Disabled | `thinkingBudget: 0` — prevents unnecessary token usage and latency for this deterministic classification task |
-
-**Key finding:** Uzbek has official Google support in Gemini 2.5 Flash. The classification task (short civic messages, structured output) is well within the model's capability. Raw Uzbek text works without transliteration preprocessing.
-
-**Prompt engineering note:** Few-shot examples in Uzbek Cyrillic (3–5 examples per category) will significantly improve classification accuracy and consistency.
-
-_Source: Google Gemini official language support documentation, Uzbek NLP research, community testing (2025)_
-
-### Technology Adoption Summary
-
-**Recommended MVP stack:**
-
-```
-Bot Layer:        grammY (Node.js/TypeScript) + webhooks
-Queue:            Redis + BullMQ
-Classifier:       Google Gemini 2.5 Flash (@google/genai SDK, thinkingBudget:0)
-Database:         PostgreSQL
-API/Backend:      Fastify (Node.js/TypeScript)
-Frontend:         React or Next.js
-Infra (pilot):    Single VPS + Docker Compose + Nginx + Let's Encrypt
-```
-
-**Alternatives considered and deferred:**
-- OpenAI GPT-4o-mini: viable cost-driven fallback; 2.8× cheaper than Gemini 2.5 Flash overall ($1.23 vs $3.47/month at pilot volume); chosen as fallback not primary because Gemini has superior official Uzbek support
-- Python for bot layer: feasible but splits the stack; Node.js keeps it unified
-- Local AI model: cost benefit negligible at pilot scale; operational complexity high
-- Serverless (Vercel/Cloudflare): complicates persistent queue; VPS simpler for pilot
+**BullMQ recommendation:** use BullMQ for queue and scheduled classification jobs, but verify the exact API and version during package selection. The previous recommendation to prefer `upsertJobScheduler` is plausible for newer BullMQ versions, but architecture must confirm the current official API before code is written.
 
 ---
 
-## Integration Patterns Analysis
+## Cloud Infrastructure and Deployment
 
-### Telegram → Bot → Queue Integration
+For pilot scale — 1 district, 3–5 groups — a single VPS remains acceptable.
 
-**The canonical production pattern (verified 2024–2025):**
+| Component | Pilot choice | Notes |
+|---|---|---|
+| Hosting | Single VPS | Simple and cheap; acceptable with backups and monitoring. |
+| Runtime | Docker Compose | Good fit for solo developer and modular monolith. |
+| HTTPS | Nginx + Let's Encrypt | Required for webhook/dashboard security. |
+| DB | PostgreSQL on VPS | Acceptable for pilot; managed DB can be revisited post-pilot. |
+| Redis | Redis on VPS | Acceptable for pilot. |
+| Backups | Daily `pg_dump` to external storage | Non-negotiable because real client data is involved. |
 
+---
+
+## AI Classification — Corrected Position
+
+### Corrected model decision
+
+The original document selected **Gemini 2.5 Flash** as fixed primary. That is now softened.
+
+**Current recommendation:** use a Google Gemini fast/low-cost model family as the leading candidate, because structured output and Uzbek-language support are important. However, the exact model must be chosen during implementation after current verification.
+
+Candidate selection criteria:
+
+| Criterion | Required check |
+|---|---|
+| Uzbek quality | Test against real mixed Uzbek Latin/Cyrillic/Russian mahalla messages. |
+| Structured output | Must support JSON/schema output reliably in current SDK. |
+| Cost | Recalculate from current official pricing. |
+| Latency | Must fit 20-minute batch cadence comfortably. |
+| SDK support | Must work cleanly with TypeScript and `@google/genai`. |
+| Determinism | Prefer temperature 0 and non-thinking/low-latency mode where supported. |
+
+### Important correction on pricing
+
+Do **not** rely on the previous exact Gemini 2.5 Flash cost estimates as final. AI provider pricing and model lineup are unstable. Architecture should keep model/provider settings configurable.
+
+### Fallback model
+
+OpenAI or other providers can remain fallback candidates, but their current model names, pricing, structured output support, and Uzbek quality must also be rechecked before implementation.
+
+### Classifier benchmark requirement
+
+Before go-live, create a small labeled evaluation set from real or realistic mahalla messages.
+
+Recommended minimum:
+
+1. 100–200 mixed-language messages.
+2. Human labels for `decision`, `category`, `hokim_related`, and `tone`.
+3. Include short civic messages such as `gaz?`, `suv?`, `tok?`, `свет?`.
+4. Include noisy group chatter, congratulations, bot spam, links, announcements, forwarded text, and complaints.
+5. Measure at least signal recall and false positive rate.
+
+Do not set hard accuracy thresholds until real data exists, but obvious civic signal false negatives must be treated as high severity.
+
+---
+
+## Uzbek Language AI Support
+
+Uzbek support is a valid reason to prefer Gemini-family models, but “official language support” does not prove quality for this domain.
+
+Real mahalla groups may include:
+
+- Uzbek Latin and Cyrillic.
+- Russian.
+- Mixed scripts in the same message.
+- Local slang and typos.
+- Short indirect complaints.
+- Administrative announcements.
+- Forwarded messages.
+
+**Prompt guidance:** include few-shot examples across scripts and tones. Do not use transliteration preprocessing unless real tests prove it helps.
+
+---
+
+## Recommended MVP Stack
+
+```text
+Bot Layer:        grammY (Node.js/TypeScript) + webhooks
+Queue:            Redis + BullMQ
+Classifier:       Configurable Gemini-family model via @google/genai after current validation
+Database:         PostgreSQL
+API/Backend:      Fastify (Node.js/TypeScript)
+Frontend:         React or Next.js SPA
+Infra:            Single VPS + Docker Compose + Nginx + Let's Encrypt
 ```
+
+Deferred/alternative options:
+
+- GPT/OpenAI model fallback if benchmark or pricing favors it.
+- Managed PostgreSQL/Redis post-pilot.
+- Local AI model only if cloud AI becomes unacceptable; not recommended for MVP.
+- Serverless is not preferred because the worker/queue model is simpler on VPS.
+
+---
+
+## Integration Pattern
+
+```text
 Telegram Server
-    ↓  HTTPS POST (webhook)
-Webhook Listener (grammY)
-    ↓  validates request origin (X-Telegram-Bot-Api-Secret-Token)
-    ↓  returns 200 OK immediately (<60ms)
-    ↓  applies pre-filter stack (see below) — discards silently if matched
-    ↓  pushes qualifying message to BullMQ job
-Redis Queue (BullMQ)
-    ↓  persists job
-Bot Worker (Node.js)
-    ↓  picks up job
-    ↓  saves to raw_messages table (PostgreSQL)
-    ↓  marks classification_status = 'pending'
+  → HTTPS webhook
+  → grammY/Fastify webhook listener
+  → validate Telegram webhook secret header
+  → apply safe synchronous pre-filters
+  → persist/queue qualifying messages
+  → scheduled worker classifies pending raw messages every 20 minutes
+  → write signal_messages
+  → delete ignored raw_messages after successful classification
+  → dashboard reads signal_messages through REST API
 ```
 
-**Pre-filter stack (applied in webhook handler, before queuing):**
+Critical rules:
 
-| Layer | Filter | Rule | Reason |
-|---|---|---|---|
-| **F1** | Bot sender filter | `from.is_bot === true` → discard | Advertising/spam bots in mahalla groups; bots cannot be residents reporting civic issues |
-| **F2** | Message type filter | Not a text message → discard | Photos, stickers, voice notes, polls, GIFs carry no classifiable civic text |
-| **F3** | Trivial content filter | `text.trim().length < 5` OR only emoji OR bare URL OR starts with `/` → discard | Pure reactions, acknowledgments ("ok", "👍"), bot commands — structurally cannot contain a civic signal |
+- Webhook handler must not call AI.
+- Webhook handler must not block on slow work.
+- Store `telegram_update_id` with a unique constraint for idempotency.
+- Keep classifier provider/model configurable.
+- Parse and validate AI JSON output with runtime validation, not trust alone.
 
-> ✅ **All three filters are zero-false-negative risk.** No legitimate civic signal can originate from a bot account, exist in a non-text message, or fit into <5 characters. Only genuine human text messages reach the AI.
+---
 
-**Estimated pre-filter impact at pilot scale:**  
-~40–50% of raw Telegram group traffic is discarded before queuing (bot spam: ~15–30%, non-text: ~20–25%, trivial text: ~10–15%). This meaningfully reduces batch size and AI cost at scale.
+## Pre-filter Stack — Corrected Risk Language
 
-**Critical integration rules:**
-- The webhook handler **must never block** — all filtering is synchronous O(1) checks, no DB calls
-- Store Telegram `update_id` with unique constraint in DB for idempotency (prevents duplicate processing on Telegram retries)
-- Pre-filters run in F1 → F2 → F3 order; short-circuit on first match
+The original document claimed the filters had “zero false-negative risk.” That is not defensible. The corrected position is:
 
-_Source: Community production architecture guides, grammY documentation, BullMQ docs_
+> Pre-filters are cost/noise controls. They are allowed only when they are simple, explainable, centralized, covered by tests, and validated against real mahalla data.
 
-### Batch Classification Integration
+### Proposed MVP pre-filters
 
-**Two viable approaches for the 20-min batch:**
+| Layer | Filter | Corrected rule |
+|---|---|---|
+| F1 | Bot sender filter | Discard `from.is_bot === true`, but log/count discarded bot messages for health visibility. |
+| F2 | Message type filter | Ignore non-text messages for MVP, but explicitly decide whether `caption` text should be processed. |
+| F3 | Trivial content filter | Avoid aggressive `<5 chars` threshold until real data is reviewed. Start with empty/whitespace, pure emoji, bot commands, and clearly non-informative text only. |
 
-#### Option A: Real-time API Batch (Recommended for MVP)
+### Explicit warning
+
+Short texts can be real civic signals in this domain. Examples:
+
+- `gaz?`
+- `suv?`
+- `tok?`
+- `свет?`
+
+Therefore, do not discard short human text solely because it is under five characters unless benchmark data proves the rule is safe.
+
+### Centralization requirement
+
+All pre-filter logic must live in one module, for example:
+
+```text
+src/bot/filters/pipeline.ts
 ```
-BullMQ Repeatable Job (every 20 min)
-    ↓  fetches unprocessed messages from DB (batch by district → mahalla)
-    ↓  builds prompt payload with system instructions + messages
-    ↓  calls Gemini 2.5 Flash API (synchronous — results in <30s)
-    ↓  receives structured JSON responses (responseSchema enforced)
-    ↓  upserts signal_messages, deletes ignored raw_messages
-    ↓  updates batch health status
+
+No scattered filtering rules across webhook handlers, workers, or API code.
+
+---
+
+## Batch Classification Integration
+
+### Recommended approach
+
+Use synchronous model API calls inside a BullMQ scheduled worker every 20 minutes.
+
+```text
+BullMQ scheduled job
+  → fetch pending raw_messages
+  → group messages by district/mahalla where useful
+  → send to classifier provider
+  → parse structured JSON
+  → validate schema locally
+  → write signal_messages
+  → delete ignored raw_messages
+  → update batch_health
 ```
-- **Latency:** Results visible within 20 min of message arrival
-- **Cost:** Gemini 2.5 Flash ~$0.075/1M input tokens (non-thinking)
-- **Complexity:** Low — single service, synchronous calls
 
-#### Option B: Async Batch (Deferred)
+### Corrected model wording
+
+Do not hardcode `gemini-2.5-flash` in the architecture as a permanent choice. Use environment/config values such as:
+
+```text
+AI_PROVIDER=google
+AI_MODEL=<selected-current-model>
+AI_TEMPERATURE=0
+AI_THINKING_BUDGET=0   # only if supported by selected model/API
 ```
-Not applicable for MVP — Gemini's async batch mode (if available) would
-introduce multi-hour delays incompatible with the live dashboard use case.
-```
-- **Verdict: ❌ Not suitable for MVP** — 20-min live batching requires synchronous API calls
 
-**Confirmed recommendation:** Use Gemini 2.5 Flash standard API synchronously in BullMQ worker.
+---
 
-_Source: Google Gemini API documentation, batch pipeline architecture research_
+## Structured Output Integration
 
-### Gemini Structured Output Integration
+Preferred direction: use `@google/genai` with JSON/schema output if current SDK supports the required shape cleanly.
 
-**Use Gemini's `responseSchema` with `responseMimeType: "application/json"` (not OpenAI-style JSON mode):**
+Implementation requirements:
 
-```typescript
-// SDK: @google/genai (unified SDK — replaces deprecated @google/generative-ai)
-// npm install @google/genai
-import { GoogleGenAI } from '@google/genai';
+- Verify SDK syntax against official docs and installed TypeScript types.
+- Keep schema in source code as a single reusable object.
+- Validate parsed model output with Zod or equivalent runtime validation.
+- Treat invalid model output as retryable or reviewable, not silently accepted.
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+Required logical fields:
 
-async function classifyMessages(prompt: string): Promise<string> {
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: prompt,
-    config: {
-      temperature: 0,                        // deterministic classification
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: 'object',
-        properties: {
-          message_id:    { type: 'string' },
-          decision:      { type: 'string', enum: ['signal', 'ignore'] },
-          // hokim_related is a boolean flag, NOT a category — see rationale below
-          category:      { type: 'string',  enum: ['water', 'electricity', 'gas', 'waste'],
-                           nullable: true },
-          hokim_related: { type: 'boolean' },
-          tone:          { type: 'string',
-                           enum: ['complaint', 'announcement', 'praise', 'question'],
-                           nullable: true },
-          short_label:   { type: 'string', nullable: true },
-        },
-        required: ['message_id', 'decision', 'hokim_related'],
-      },
-      thinkingConfig: { thinkingBudget: 0 }, // disable thinking — no @ts-expect-error needed
-    },
-  });
-  return response.text ?? '';
+```ts
+{
+  message_id: string;
+  decision: 'signal' | 'ignore';
+  category: 'water' | 'electricity' | 'gas' | 'waste' | null;
+  hokim_related: boolean;
+  tone: 'complaint' | 'announcement' | 'praise' | 'question' | null;
+  short_label?: string | null;
 }
 ```
 
-**Key configuration:**
-- `model: 'gemini-2.5-flash'` — cost-efficient, fast, official Uzbek support
-- `temperature: 0` — deterministic, reproducible output
-- `thinkingBudget: 0` — disables Gemini 2.5 Flash's thinking feature (saves tokens + latency)
-- `responseMimeType: 'application/json'` — enforces JSON output
-- `responseSchema` — inline JSON Schema object (validate response shape manually or with a thin Zod wrapper post-parse)
-- System prompt: Uzbek civic classification context + 3–5 few-shot examples per category
-
-**Batch call strategy:** Send all unprocessed messages in one API call with multi-message prompt (group by mahalla for context), or parallel individual calls if isolation preferred.
-
-> ⚠️ **Schema rationale:** `hokim_related` is intentionally a standalone `boolean` flag, not a `category` value. Per `project-raw-idea.md §8`: "Hokim-related is a cross-cutting priority view, not a separate service category." A gas message can be `category=gas` AND `hokim_related=true` simultaneously.
-
-_Source: Google Gemini API documentation, @google/generative-ai SDK (2025)_
-
-### Dashboard API Integration
-
-**REST API design for the dashboard frontend:**
-
-```
-GET /api/signals?category=gas&mahalla_id=...&from=...&to=...   → lane data
-GET /api/signals/:id/context?range=...                          → drawer context
-GET /api/mahallas                                               → filter options  
-GET /api/health                                                 → operational status
-POST /api/auth/login                                            → session-based auth
-```
-
-**Authentication pattern:** Session-based (not JWT) for this internal dashboard:
-- Simpler revocation (kick out a user immediately)
-- No XSS token theft risk
-- Single deployment, no cross-service token sharing needed
-- Use `express-session` + PostgreSQL session store (or Redis)
-
-_Source: Auth best practices research 2025_
-
-### Communication Protocols Summary
-
-| Integration Point | Protocol | Format | Notes |
-|---|---|---|---|
-| Telegram → Bot | HTTPS webhook (POST) | JSON (Telegram Update object) | grammY handles parsing |
-| Bot → Queue | In-process (BullMQ) | JSON job payload | Minimal payload — store IDs only |
-| Queue → DB | PostgreSQL driver | SQL | Async, non-blocking |
-| Worker → Gemini | HTTPS REST | JSON (responseSchema enforced) | @google/generative-ai SDK |
-| Backend → Frontend | HTTPS REST | JSON | Fastify |
-| Frontend → Browser | HTTP/2 | JSON + HTML/JS | React/Next.js |
-| Health Monitoring | Internal polling / logs | JSON | Admin-only endpoint |
-
-### Data Security Integration
-
-| Risk | Mitigation |
-|---|---|
-| Bot token exposure | Environment variable only, never in code/logs |
-| Telegram webhook spoofing | Validate `X-Telegram-Bot-Api-Secret-Token` header |
-| Sender data in DB | Store as snapshot; policy-based display in API layer |
-| Dashboard auth | HTTPS only; session cookies with `httpOnly`, `secure` flags |
-| Gemini API key | Environment variable only (`GEMINI_API_KEY`); never in code/logs; rotate if exposed |
-| Data at rest | PostgreSQL row-level encryption optional; disk encryption on VPS sufficient for pilot |
-
-### Legal and Regulatory Considerations
-
-> ℹ️ **These items are flagged for awareness and paper trail only. Per client preference (2026-05-15), the hokim has accepted full responsibility for all policy decisions. None of these are implementation blockers for the developer.**
-
-| Question | Status | Owner |
-|---|---|---|
-| Uzbekistan personal data protection law applicability | 📋 Noted | **Client (Hokim)** — determines if Law No. ZRU-547 (On Personal Data) applies and how to comply. |
-| Resident notification | 📋 Noted | **Client (Hokim)** — decides whether residents are informed a bot is present (e.g., pinned group notice). |
-| Sender data retention legality | 📋 Noted | **Client (Hokim)** — confirms their authority covers storing sender display names + message content. |
-| Government data residency | 📋 Noted | **Client (Hokim)** — confirms whether foreign VPS (Hetzner/DigitalOcean) is acceptable for this data. |
-| Forwarded message ownership | 📋 Noted | **Client (Hokim)** — decides handling of messages forwarded into the group from external sources. |
-
-**Developer stance:** Implement specified technical requirements. Document policy-relevant items above for client awareness. Do not block or gate implementation on policy resolution.
+`hokim_related` is intentionally a boolean flag, not a category. The dashboard Hokim lane must query `hokim_related = true`, while service lanes query `category = ...`.
 
 ---
 
-## Architectural Patterns and Design
+## Dashboard API Integration
 
-### Recommended Architecture: Modular Monolith
+REST remains appropriate:
 
-For a small team building an internal tool at pilot scale, a **Modular Monolith** is the clear architectural choice over microservices.
-
-| Pattern | Suitability | Reason |
-|---|---|---|
-| **Modular Monolith** | ✅ Recommended | Single codebase, fast dev velocity, no distributed systems overhead, easy to extract modules later |
-| Microservices | ❌ Premature | Requires significant DevOps, complicates debugging, adds network latency for no benefit at pilot scale |
-| Serverless | ❌ Not suitable | Persistent queue/worker model conflicts with serverless execution model |
-
-**Module boundaries for Mahalla Ovozi:**
-```
-/src
-  /bot          — Telegram webhook handler, message intake
-  /queue        — BullMQ worker configuration, job definitions
-  /classifier   — Gemini integration, prompt management, response parsing
-  /signals      — Signal message domain: storage, queries, retention
-  /dashboard    — REST API layer for frontend (filters, lanes, drawer)
-  /auth         — Session management, user access control
-  /health       — Operational monitoring, batch status tracking
-  /shared       — Types, DB client, config, utilities
+```text
+GET  /api/signals?category=gas&mahalla_id=...&from=...&to=...
+GET  /api/signals?hokim_related=true&from=...&to=...
+GET  /api/signals/:id/context?range=...
+GET  /api/mahallas
+GET  /api/health
+POST /api/auth/login
+POST /api/auth/logout
 ```
 
-Modules communicate via defined interfaces, never cross-importing internal implementations.
+Auth remains session-based, not JWT, because this is an internal dashboard where immediate revocation and secure cookies are more useful than portable tokens.
 
-_Source: Modular monolith best practices research 2024–2025_
+---
 
-### System Architecture Diagram
+## Data Security Integration
 
-```
-Tier 1 — Intake (Event Producer)
-  Telegram Bot (grammY) → webhook handler
-      [F1] from.is_bot? → discard (advertising/spam bots)
-      [F2] non-text?    → discard (photos, stickers, voice, polls)
-      [F3] trivial?     → discard (pure emoji, <5 chars, bare URL, /command)
-      → qualifying message → Redis/BullMQ queue
-  Rule: pre-filters are O(1), synchronous — webhook never blocks
+| Risk | Mitigation |
+|---|---|
+| Bot token exposure | Environment variable only; never code/logs. |
+| Webhook spoofing | Validate `X-Telegram-Bot-Api-Secret-Token`. |
+| API key exposure | Environment variable only; rotate if leaked. |
+| Session theft | `httpOnly`, `secure`, same-site cookies; HTTPS only. |
+| Data loss | Daily external backups; restore procedure before pilot. |
+| Sensitive sender data | Store only what PRD requires; enforce district-scoped access. |
 
-Tier 2 — Processing (Event Consumer)
-  BullMQ Worker (immediate)    → save raw_message to PostgreSQL
-  BullMQ Scheduled Job (20min) → batch classify (AI) → write signal_messages
-                                                      → delete ignored raw_messages
+---
 
-Tier 3 — Presentation
-  REST API (Fastify) → serves dashboard queries
-  React frontend     → renders lanes, drawer, filters
-```
+## Data Architecture
 
-**Key architectural decisions:**
-
-| Decision | Choice | Rationale |
-|---|---|---|
-| Pre-filter stack | 3-layer rule-based filter (F1 bot sender, F2 type, F3 trivial) | Eliminates ~40–50% of raw traffic before AI; zero false-negative risk; all checks are O(1) |
-| Intake acknowledgement | Fire-and-forget queue | Telegram's 60s timeout; avoid duplicate webhook sends |
-| Raw message storage | PostgreSQL temp table | Queryable, transactional, easy cleanup |
-| Batch trigger | BullMQ repeatable job | Native 20-min interval, built-in retry/failure |
-| Signal storage | PostgreSQL permanent table | ACID guarantees, complex query support for filters/drawer |
-| Frontend data | REST polling (short interval) | Simple; no WebSocket needed since 20-min batch latency acceptable |
-
-### Data Architecture
-
-**Core tables:**
+Core tables remain directionally valid:
 
 ```sql
--- Temporary intake
 raw_messages (
-  id, telegram_update_id UNIQUE,  -- idempotency key
-  chat_id, message_id, district_id, mahalla_id,
-  sender_id, sender_name_snapshot, text,
-  received_at, classified_at, classification_status
+  id,
+  telegram_update_id UNIQUE,
+  chat_id,
+  message_id,
+  district_id,
+  mahalla_id,
+  sender_id,
+  sender_name_snapshot,
+  text,
+  received_at,
+  classified_at,
+  classification_status
 )
 
--- Permanent signal store
 signal_messages (
-  id UUID PK, telegram_message_id, telegram_chat_id,
-  district_id, mahalla_id,
-  sender_reference, sender_display_name,
-  raw_text, category ENUM('water','electricity','gas','waste'),
+  id UUID PRIMARY KEY,
+  telegram_message_id,
+  telegram_chat_id,
+  district_id,
+  mahalla_id,
+  sender_reference,
+  sender_display_name,
+  raw_text,
+  category ENUM('water','electricity','gas','waste'),
   hokim_related BOOLEAN,
   tone ENUM('complaint','announcement','praise','question'),
   short_label VARCHAR(50),
-  message_timestamp, captured_at, classified_at
+  message_timestamp,
+  captured_at,
+  classified_at
 )
 
--- Supporting
 mahallas (id, district_id, name, telegram_chat_id, is_active)
 districts (id, name)
 users (id, username, district_id, role)
 batch_health (id, district_id, batch_run_at, status, messages_processed, errors)
 ```
 
-**Required database indexes:**
-
-```sql
--- Primary dashboard lane query (category filter + time range)
-CREATE INDEX idx_signals_category_time ON signal_messages (category, message_timestamp DESC);
-
--- Drawer query (mahalla + category + time range)
-CREATE INDEX idx_signals_drawer ON signal_messages (mahalla_id, category, message_timestamp DESC);
-
--- Hokim-related filter
-CREATE INDEX idx_signals_hokim ON signal_messages (hokim_related, message_timestamp DESC) WHERE hokim_related = true;
-
--- Search (fallback ILIKE — upgrade to tsvector if search is slow)
-CREATE INDEX idx_signals_raw_text ON signal_messages USING gin(to_tsvector('simple', raw_text));
-
--- Intake idempotency
-CREATE UNIQUE INDEX idx_raw_update_id ON raw_messages (telegram_update_id);
-```
-
-_Source: Event-driven pipeline architecture research, PostgreSQL schema design best practices_
+Architecture should decide whether ignored-message debug sampling is needed during classifier tuning. Production default remains: delete ignored raw messages after successful classification.
 
 ---
 
-## Implementation Approaches and Technology Adoption
+## Testing Strategy
 
-### Development Workflow
-
-```
-Local dev:    Long polling bot + local Redis + local PostgreSQL (Docker Compose)
-Staging:      Same as production config, test Telegram groups
-Production:   VPS + webhook + Nginx + Let's Encrypt + Docker Compose
-```
-
-**CI/CD (minimal for solo dev):**
-- GitHub Actions: lint + typecheck on push
-- Deploy: SSH + docker-compose pull + up
-- Environment variables: `.env` files, never committed to git
-
-### Testing Strategy
-
-| Layer | What to Test | Approach |
-|---|---|---|
-| Classifier | Signal/ignore/category/tone accuracy | Offline labeled test set: 100+ Uzbek messages (human-labeled) |
-| Pre-filter stack | F1 bot sender, F2 non-text, F3 trivial content — each filter discards correctly | Unit tests: mock bot message, mock sticker update, mock emoji-only text, mock ad bot update |
-| Bot intake | Idempotency (duplicate update_id rejected), queue enqueue for qualifying messages | Unit tests with mock Telegram updates |
-| API endpoints | Filter combinations, drawer context query | Integration tests with test DB |
-| E2E | Full flow: human text message → raw_messages → signal in API | Single E2E test per major feature |
-
-**Classifier accuracy validation (pre-launch requirement):**
-1. Collect 100+ real messages from client (manually labeled)
-2. Run classifier against test set
-3. Measure: signal recall (don't miss real signals), false positive rate
-4. Target: >85% signal recall, <20% false positive rate for pilot go/no-go
-
-### Operational Monitoring
-
-| Check | Mechanism | Who Sees It |
-|---|---|---|
-| Bot receiving messages | Last message timestamp per group | Admin health endpoint |
-| Batch processing status | batch_health table, last_run_at | Admin health endpoint |
-| Queue depth | BullMQ job count | Admin health endpoint |
-| Processing errors | Error log + batch_health.errors | Admin/operator |
-| Bot removed from group | Telegram `my_chat_member` update event | Bot detects + logs alert |
-
-**Dashboard for hokim:** Never shows technical errors — only "⚠️ Signals may be delayed" if batch is >30min overdue.
-
-### Cost Summary
-
-| Item | Estimated Monthly Cost |
+| Layer | Required tests |
 |---|---|
-| VPS (Hetzner CX21) | ~$6 |
-| Domain + SSL | $0 (Let's Encrypt) |
-| Gemini 2.5 Flash API (pilot volume) | ~$3.47–17 |
-| Redis + PostgreSQL (on-VPS) | $0 |
-| DB backups (Backblaze B2/S3) | ~$0.50 |
-| **Total pilot** | **~$9.50–23/month** |
+| Pre-filter stack | Unit tests for bot sender, non-text/caption behavior, pure emoji, command, short civic examples. |
+| Bot intake | Duplicate `update_id`, queue/persist behavior, webhook secret validation. |
+| Classifier | Offline benchmark against labeled Uzbek/Russian mixed messages. |
+| Schema validation | Invalid/missing AI fields are rejected or retried safely. |
+| API | Lane filters, Hokim boolean lane, time range, mahalla filter, search, context drawer. |
+| E2E | Telegram-like update → raw message → classifier → signal API. |
 
-### Backup and Disaster Recovery
+---
 
-> ⚠️ **Single VPS = single point of failure. Backups are non-negotiable even for a pilot with a real client.**
+## Operational Monitoring
 
-| Backup Target | Strategy | Frequency | Cost |
-|---|---|---|---|
-| PostgreSQL data | `pg_dump` → compressed → upload to Backblaze B2 or S3 | Daily (cron at 02:00) | ~$0.50/month |
-| Application config | `.env` files stored in encrypted password manager | On change | $0 |
-| Docker Compose setup | Version-controlled in private Git repo | On change | $0 |
+| Check | Mechanism | Who sees it |
+|---|---|---|
+| Bot receiving messages | Last received message timestamp per group | Operator/admin |
+| Batch processing status | `batch_health` table | Operator/admin + simplified dashboard delay state |
+| Queue depth | BullMQ counts | Operator/admin |
+| Bot removed from group | `my_chat_member` update | Operator/admin |
+| Classifier failures | Structured logs + batch health errors | Operator/admin |
+| Backup success | Backup job logs/alert | Operator/admin |
 
-**Recovery procedure (must be documented before pilot go-live):**
-1. Provision new VPS (same spec)
-2. Restore PostgreSQL from latest `pg_dump`
-3. Deploy via `docker-compose up` from Git repo
-4. Re-register webhook with Telegram
-5. Verify bot active in all groups
+The hokim-facing UI should show only non-technical status such as “Signals may be delayed.”
 
-**Target RTO (Recovery Time Objective):** < 4 hours for pilot  
-**Target RPO (Recovery Point Objective):** < 24 hours (daily backup)
+---
 
-### Risk Assessment
+## Cost Summary — Corrected
+
+Do not commit exact AI cost as a stable requirement. Use a revalidated estimate during implementation.
+
+Still reasonable pilot expectation:
+
+| Item | Expected pilot range |
+|---|---|
+| VPS | Low monthly cost, provider-dependent |
+| SSL | Free with Let's Encrypt |
+| PostgreSQL + Redis | $0 additional if colocated on VPS |
+| Backups | Low cost with B2/S3-compatible storage |
+| AI classification | Must be recalculated from current provider pricing and measured token use |
+
+The PRD may keep a broad pilot budget target, but exact AI dollar amounts should be marked as estimates pending revalidation.
+
+---
+
+## Risk Assessment
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| AI classification quality poor for Uzbek | Medium | High | Pre-launch accuracy test; adjust prompts/examples |
-| Telegram bot kicked from group | Low-Med | High | Monitor `my_chat_member` events; alert operator |
-| Bot offline >24h → updates lost | Low | High | Reliable VPS + Docker restart policy |
-| Privacy mode not disabled properly | Medium | High | Setup checklist before adding bot to each group |
-| Gemini API downtime | Low | Medium | Show "processing delayed" indicator; retry on next batch |
-| Hokim finds UI confusing | Low-Med | Medium | UX testing session before pilot go-live |
+| AI quality poor for real Uzbek mahalla text | Medium | High | Benchmark with labeled real messages; iterate prompt/model. |
+| Aggressive pre-filter drops real signals | Medium | High | Conservative thresholds; unit tests with short civic signals; real-data validation. |
+| Telegram setup not behaving as assumed | Medium | High | Test group setup checklist before client pilot. |
+| Bot offline > update retention window | Low-Med | High | VPS reliability, restart policy, health alerts. |
+| API/model pricing changes | Medium | Medium | Configurable provider/model; revalidate pricing before implementation. |
+| Single VPS failure | Low-Med | High | Daily external backups and documented restore procedure. |
 
 ---
 
-## Technical Research Synthesis — Executive Summary
+## Technical Research Synthesis — Corrected Executive Summary
 
-### Feasibility Verdict: ✅ MVP is Technically Feasible
+### Feasibility Verdict
 
-All four research goals are answered. No hard blockers found. Two setup requirements must not be overlooked.
+The MVP is technically feasible. No hard blocker was found.
 
----
+### Corrected confidence level
 
-### Key Findings
+Confidence is **medium-high**, not absolute. The high-level architecture is sound, but implementation must validate current provider details and real Telegram behavior.
 
-**1. Telegram Bot API — Feasible with Known Constraints**
+### Confirmed PRD-level decisions
 
-The bot can read all messages from supergroups, but two prerequisites are mandatory:
-- Privacy Mode must be disabled in @BotFather (or bot promoted to admin) before adding to groups
-- Bot must be re-added to each group after privacy mode change
-- No historical message access — pilot data collection starts from day of bot join
-- Webhooks required for production; polling creates single-instance limitation
-- Uptime is critical: offline >24h means lost updates
-
-**2. AI Classification — Feasible and Cheap**
-
-Gemini 2.5 Flash (non-thinking mode) handles Uzbek Cyrillic/Latin/Russian mixed text with official language support. The 20-min batch with synchronous API calls is correct for the live dashboard use case. Cost at pilot scale: ~$3.47/month (verified May 2026); at 5× traffic ~$17/month — still affordable for a pilot. Note: Gemini 2.5 Flash output pricing ($2.50/1M) is higher than GPT-4o-mini ($0.60/1M) — Gemini is chosen for superior Uzbek language fidelity, not cost. A 3-layer pre-filter stack (bot sender, message type, trivial content) eliminates ~40–50% of raw Telegram traffic before it reaches the AI — further reducing batch size and cost, with zero false-negative risk. Accuracy validation with a labeled test set (100+ messages) is mandatory before go-live.
-
-**3. Architecture — Straightforward**
-
-Modular monolith + event-driven pipeline (grammY → BullMQ → PostgreSQL → Fastify API → React frontend) is a proven, well-documented pattern. No novel architecture required. All chosen libraries are production-mature.
-
-**4. 20-Minute Batch Pipeline — Validated**
-
-BullMQ's native repeatable jobs handle the 20-min interval reliably (use `upsertJobScheduler` — `repeat: { every }` is deprecated in v5.16.0+). Synchronous Gemini API calls complete in <30s for a typical batch. The full pipeline works end-to-end with the chosen stack.
-
----
-
-### Recommended MVP Technical Stack
-
-```
-Bot:            grammY (Node.js/TypeScript) + webhooks
-Queue:          Redis + BullMQ (repeatable jobs, 20-min interval)
-Classifier:     Google Gemini 2.5 Flash, responseSchema, temperature=0, thinkingBudget=0
-Database:       PostgreSQL
-Backend API:    Fastify (Node.js/TypeScript)
-Frontend:       React (or Next.js)
-Auth:           Session-based (fastify-session + Redis store)
-Infra (pilot):  Single VPS + Docker Compose + Nginx + Let's Encrypt
-Monitoring:     batch_health table + admin health endpoint
-```
-
-### PRD-Level Decisions Confirmed by Research
-
-These open questions from `project-raw-idea.md` §22 are now answerable:
-
-| Open Question | Research-Informed Answer |
+| Decision | Status |
 |---|---|
-| Retention: raw messages | Delete after successful classification (same batch run) |
-| Retention: signal messages | 90 days recommended for pilot; revisit based on DB growth |
-| OpenAI Batch API use | ❌ Not for MVP — 24h delay incompatible with live dashboard |
-| Webhook vs polling | Webhooks for production; polling for local dev only |
-| Bot admin requirement | Disable privacy mode OR promote to admin — document as setup step |
-| No historical access | Confirmed — pilot must start fresh; communicate to client |
-| Normalized text storage | Processing only — don't store long-term for MVP |
-| Pre-filtering before AI | ✅ 3-layer rule-based stack: F1 `from.is_bot` (ad/spam bots), F2 non-text type, F3 trivial content (<5 chars, emoji-only, bare URL, `/command`). All zero false-negative risk. Applied in webhook handler before queuing. |
+| Webhook production intake | Valid direction. |
+| 20-minute classification batch | Valid. |
+| Modular monolith | Valid. |
+| PostgreSQL signal store | Valid. |
+| Session auth | Valid. |
+| Raw messages deleted after classification | Valid product decision, with optional controlled debug strategy during tuning. |
+| `hokim_related` as boolean flag | Confirmed. |
+| AI model exact choice | Provisional; revalidate. |
+| Pre-filter thresholds | Provisional; validate with real data. |
 
-### Next Steps After This Research
+### Immediate next steps before Architecture
 
-1. **Domain Research** (`bmad-domain-research`) — Mahalla governance, hokim workflow, existing processes
-2. **Create PRD** (`bmad-create-prd`) — with John; use raw idea + this research as input; resolve open questions §22
-3. **Create UX Design** (`bmad-create-ux-design`) — with Sally; 5-lane dashboard warrants dedicated UX work
-4. **Create Architecture** (`bmad-create-architecture`) — with Winston; finalize DB schema, API contracts, service boundaries
+1. Patch PRD/context docs to reflect this validation correction.
+2. During architecture, add explicit validation tasks for:
+   - Telegram test group behavior.
+   - current Gemini/OpenAI model and pricing check.
+   - classifier benchmark plan.
+   - centralized pre-filter pipeline.
+   - short civic text acceptance criteria.
+3. Do not start implementation until those assumptions are represented in architecture and stories.
 
 ---
 
-**Technical Research Completion Date:** 2026-05-13
-**Research Period:** Current web sources, 2024–2025
-**Source Verification:** All critical technical claims verified against multiple sources
-**Confidence Level:** High — core feasibility confirmed; implementation details may evolve
-
-_This document serves as the technical feasibility foundation for the Mahalla Ovozi PRD and Architecture phases._
+_This corrected document should be used as the technical feasibility foundation for Architecture and Epics/Stories. It intentionally avoids freezing unstable provider/model/pricing details before implementation-time validation._
