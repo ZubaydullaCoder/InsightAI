@@ -22,7 +22,18 @@ Key corrections:
 - **BullMQ/API syntax marked for verification:** Use BullMQ for scheduling, but confirm exact current API/version during architecture/package selection.
 - **Structured output marked for verification:** Continue preferring `@google/genai`, but verify current TypeScript syntax for `responseSchema`, `responseMimeType`, and `thinkingConfig`.
 
-#### 2. User/Client Preferences Log Updated
+#### 2. PRD Consistency Patch Applied
+File: `_bmad-output/planning-artifacts/prd.md`
+
+The PRD remains complete and product scope remains unchanged. It was lightly patched to remove unstable implementation claims:
+
+- Removed hard Gemini 2.5 Flash commitment.
+- Replaced exact AI cost claims with implementation-time revalidation language.
+- Replaced strong pre-filter impact claims with conservative centralized pre-filter wording.
+- Clarified `hokim_related` remains a boolean cross-cutting flag, not a category.
+- Added implementation validation notes for AI model, Telegram behavior, classifier benchmark, and pre-filter tests.
+
+#### 3. User/Client Preferences Log Updated
 File: `user-client-preferences-log.md`
 
 Updated to reflect:
@@ -34,16 +45,16 @@ Updated to reflect:
 - Bot sender filter remains mandatory but should be counted/logged.
 - Pilot cost target remains low, but exact AI cost must be recalculated.
 
-#### 3. PRD Still Complete, But Needs Light Consistency Patch
-File: `_bmad-output/planning-artifacts/prd.md`
+#### 4. Refined MVP Tooling Defaults Recorded
+File: `user-client-preferences-log.md`
 
-The PRD remains complete and product scope remains valid. However, it still contains some technical wording inherited from the older research, especially:
+Tooling preferences added for the architecture phase:
 
-- Gemini 2.5 Flash as a fixed technical choice.
-- Exact pilot cost ranges tied to prior Gemini pricing.
-- Strong claims about 3-layer pre-filter impact.
-
-Patch the PRD lightly: do not rewrite scope or FR/NFRs. Only soften unstable implementation details.
+- **Frontend:** prefer React + Vite SPA with React Router and TanStack Query. Next.js only if Architecture identifies a concrete benefit.
+- **ORM:** prefer Drizzle unless Prisma is intentionally chosen for beginner productivity.
+- **Runtime validation:** use Zod for env/config, API validation, Telegram-derived payload normalization, and AI output validation.
+- **Runtime topology:** keep one modular TypeScript monolith repo, but deploy separate runtime entrypoints/processes: `web` and `worker`.
+- **Backend structure:** Fastify is acceptable only with strict module boundaries (`auth`, `bot`, `classifier`, `signals`, `health`, `shared`) to avoid route-handler sprawl.
 
 ---
 
@@ -95,8 +106,8 @@ All 12 workflow steps completed. Final document contains:
 | `project-raw-idea.md` | ✅ Source document — do not modify |
 | Technical Research | ✅ Corrected 2026-05-17; direction valid, unstable implementation details flagged for validation |
 | Domain Research | ✅ Complete |
-| User-Client Preferences Log | ✅ Updated 2026-05-17 |
-| PRD | ✅ Complete; needs light consistency patch after research validation |
+| User-Client Preferences Log | ✅ Updated 2026-05-17 with refined tooling defaults |
+| PRD | ✅ Complete; lightly patched after research validation |
 | UX Design | ❌ Not started |
 | Architecture Document | ❌ Not started |
 | Epics & Stories | ❌ Not started |
@@ -111,15 +122,19 @@ All 12 workflow steps completed. Final document contains:
 | Decision | Current Status |
 |---|---|
 | Architecture | Stable: Modular Monolith |
+| Language | Stable: TypeScript |
 | Bot framework | Stable direction: grammY (Node.js/TypeScript) + webhooks |
 | Queue | Stable direction: Redis + BullMQ; exact scheduler API/version must be verified |
 | AI Classifier | Provisional: Gemini-family fast/low-cost model preferred, exact model TBD after current pricing + Uzbek benchmark |
 | Gemini SDK | Stable preference: `@google/genai`; exact syntax must be verified against current docs/types |
 | Database | Stable: PostgreSQL |
-| Backend API | Stable: Fastify (Node.js/TypeScript) |
-| Frontend | Stable: SPA (React or Next.js), REST + 60s polling, no WebSocket for MVP |
+| ORM | Default preference: Drizzle; Prisma acceptable only if chosen intentionally |
+| Backend API | Stable: Fastify, with strict module boundaries |
+| Runtime validation | Stable preference: Zod |
+| Frontend | Default preference: React + Vite SPA, React Router, TanStack Query; no Next.js unless justified |
 | Auth | Stable: Session-based, not JWT |
 | Infra | Stable direction: Single VPS + Docker Compose + Nginx + Let's Encrypt |
+| Runtime topology | Stable direction: one repo, separate `web` and `worker` runtime entrypoints/processes |
 | Batch strategy | Stable: synchronous classifier calls in 20-min scheduled worker; exact provider/model TBD |
 | Pre-filter stack | Stable concept, provisional thresholds: centralized F1/F2/F3 filters; avoid aggressive short-text discard until tested |
 | `hokim_related` | Stable: Boolean flag only, never category enum |
@@ -135,16 +150,19 @@ All 12 workflow steps completed. Final document contains:
 
 Recommended order from here:
 
-1. **Patch PRD consistency wording** to align with corrected technical research. Keep scope and FR/NFRs intact.
-2. **Run `bmad-check-implementation-readiness`** after the PRD patch.
-3. **Run `bmad-create-ux-design`** for dashboard interaction patterns and component specs.
-4. **Run `bmad-create-architecture`** with explicit validation tasks for:
+1. **Run `bmad-check-implementation-readiness`** against the corrected PRD/research context.
+2. **Run `bmad-create-ux-design`** for dashboard interaction patterns and component specs.
+3. **Run `bmad-create-architecture`** with explicit validation tasks for:
    - current AI model/pricing/SDK syntax
    - Telegram test group setup
    - centralized pre-filter pipeline
    - short civic text handling
    - classifier benchmark plan
-5. **Run `bmad-create-epics-and-stories`** after architecture/UX decisions are stable.
+   - React + Vite SPA default
+   - Drizzle vs Prisma decision
+   - Zod validation strategy
+   - separate `web` and `worker` runtime entrypoints
+4. **Run `bmad-create-epics-and-stories`** after architecture/UX decisions are stable.
 
 ---
 
