@@ -19,14 +19,14 @@ briefCount: 0
 researchCount: 2
 brainstormingCount: 0
 projectDocsCount: 0
-lastConsistencyPatch: '2026-05-17 technical validation alignment'
+lastConsistencyPatch: '2026-05-18 PRD cleanup before UX design'
 ---
 
 # Product Requirements Document - mahalla-ovozi
 
 **Author:** Zubaydulla  
 **Date:** 2026-05-16  
-**Consistency Patch:** 2026-05-17 — aligned with corrected technical research validation
+**Consistency Patch:** 2026-05-18 — clarified UX/architecture handoff ambiguities without expanding MVP scope
 
 ---
 
@@ -109,13 +109,25 @@ If classification quality is insufficient, the pilot will extend prompt engineer
 | Dashboard availability | No outages during working hours |
 | Pilot duration | 2–4 weeks of real-group operation before review |
 
+### Pilot Review Questions
+
+At the end of the pilot, evaluate success with lightweight human-in-the-loop review rather than vanity analytics:
+
+- Did the hokim or staff find useful civic signals faster than reading raw Telegram chats?
+- Were false positives tolerable enough for the dashboard to remain trusted and useful?
+- Were any obvious civic signals missed in a way that reduced trust?
+- Did the five-lane dashboard and context drawer make patterns easier to understand?
+- Should the pilot continue, expand to more mahallas/staff, or pause for classifier/UX refinement?
+
 ---
 
 ## Product Scope
 
 ### MVP — Minimum Viable Product
 
-Exactly what is defined in `project-raw-idea.md` §6: one district, 3–5 mahalla groups, text-only intake, AI signal filtering, five-lane dashboard, context drawer, filters (time/mahalla/search), tone badges, session-based auth, and operational health monitoring for operators.
+Exactly what is defined in `project-raw-idea.md` §6: one district, 3–5 mahalla groups, text/caption-only intake, AI signal filtering, five-lane dashboard, context drawer, filters (time/mahalla/search), tone badges, session-based auth, and operational health monitoring for operators.
+
+For MVP intake, “text/caption-only” means Telegram `message.text` and textual `caption` content are in scope when Telegram provides them. Media binaries themselves — photos, videos, voice, stickers, polls, files, and similar non-text payloads — remain out of scope and are not stored or analyzed.
 
 No additions. Prove the concept first.
 
@@ -145,9 +157,9 @@ He didn't read a single raw group chat.
 
 ### Journey 2: Hokimi — Investigating a Specific Mahalla (Edge Case)
 
-Jamshid hears from a staff member that residents in Olmazor mahallasi are complaining about water. He wants to verify before acting. He opens the dashboard, selects Olmazor from the mahalla filter. The Water lane now shows only Olmazor signals. He sets the time range to the last 3 days. Four signals appear — two complaints, one question, one announcement. He clicks the announcement — it's from the mahalla rais about a scheduled water shutoff. The complaints are from before the announcement. The pattern makes sense. No urgent action needed.
+Jamshid hears from a staff member that residents in Olmazor mahallasi are complaining about water. He wants to verify before acting. He opens the dashboard, selects Olmazor from the mahalla filter. The Water lane now shows only Olmazor signals. He sets a custom time range for the last 3 days. Four signals appear — two complaints, one question, one announcement. He clicks the announcement — it's from the mahalla rais about a scheduled water shutoff. The complaints are from before the announcement. The pattern makes sense. No urgent action needed.
 
-**Capabilities revealed:** mahalla filter scoping all lanes, time range filter (3-day preset), drawer context with tone badges, signal/announcement differentiation via tone, search as secondary fallback.
+**Capabilities revealed:** mahalla filter scoping all lanes, time range filter (custom range up to 7 days), drawer context with tone badges, signal/announcement differentiation via tone, search as secondary fallback.
 
 ---
 
@@ -179,13 +191,13 @@ Rustam is the developer/operator who set up Mahalla Ovozi. Before the pilot laun
 | Context drawer (same mahalla + category + time range) | Journey 1, 2 |
 | Selected message highlighted in drawer | Journey 1 |
 | Mahalla filter (scopes all lanes) | Journey 2 |
-| Time range filter (presets: Today, 1h, 3h, 6h, 3d, custom) | Journey 2 |
+| Time range filter (presets: Today, 1h, 3h, 6h, custom up to 7 days) | Journey 2 |
 | Tone badges (Complaint / Announcement / Praise / Question) | Journey 2 |
 | Search filter (raw text, sender, mahalla) | Journey 3 |
 | Cross-mahalla signal view when filter = All | Journey 3 |
 | "Signals may be delayed" UI indicator (non-technical) | Journey 4 |
 | Admin health endpoint (operator-only) | Journey 4 |
-| Bot connectivity monitoring + alerts | Journey 4 |
+| Bot connectivity monitoring + operator-visible health alert state | Journey 4 |
 | Session-based auth (scoped access) | All journeys |
 
 ---
@@ -197,6 +209,8 @@ Rustam is the developer/operator who set up Mahalla Ovozi. Before the pilot laun
 Mahalla Ovozi is a private internal tool commissioned and operated by an authorized district hokimiyat. The hokim, as the commissioned authority, owns all policy decisions related to this deployment — including data handling, sender display, resident notification, and data residency. These are not implementation blockers and do not gate development or the pilot launch.
 
 The developer's responsibility is to implement specified technical requirements correctly. No regulatory approval, external audit, or compliance certification is required for this product.
+
+This client-owned policy stance does not reduce developer-owned security and data-handling responsibilities. The implementation must still enforce the PRD's technical safeguards: HTTPS, secure session cookies, webhook secret validation, environment-only secrets, district-scoped access, retention behavior, backup protection, and operator-visible health/debug information.
 
 ### Technical Constraints
 
@@ -223,10 +237,20 @@ The developer's responsibility is to implement specified technical requirements 
 | Bot token exposed | Env var only; rotate immediately if leaked |
 | Webhook spoofed | Validate secret token header on every request |
 | Data loss on VPS failure | Daily `pg_dump` backups to external object storage; RTO <4h, RPO <24h |
-| Bot removed from group | `my_chat_member` event detection; operator alert |
-| AI API downtime | BullMQ retry; show "Signals may be delayed" to hokim on next batch |
+| Bot removed from group | `my_chat_member` event detection; expose operator-visible health alert state |
+| AI API downtime | BullMQ retry; show "Signals may be delayed" to hokim on next batch; expose technical details only in operator health/logs |
 | AI model/pricing assumptions stale | Revalidate current provider/model/pricing before implementation; keep model configurable |
 | Pre-filter false negatives | Use conservative centralized filters; validate thresholds with real mahalla data before hardening |
+
+### MVP Operator Alerting
+
+For MVP, “operator alert” means an operator-visible system health state, not an additional external notification product. The minimum alert surfaces are:
+
+- Hokim/staff-facing non-technical delayed-signal indicator on the dashboard.
+- Operator-only health endpoint/status view showing bot connectivity, last successful batch time, queue depth, recent processing errors, and discard counts.
+- Structured server logs for technical diagnosis.
+
+Telegram/email/push alerts are not part of the MVP unless Architecture intentionally adds a minimal implementation for operational necessity without expanding the user-facing product scope.
 
 ---
 
@@ -267,6 +291,7 @@ Semantic HTML structure; keyboard-navigable primary interactions. No formal WCAG
 - Context drawer is a right-side overlay, not a modal — main lane content remains visible behind it
 - Tone badges are visual-only labels; no interactive behavior required
 - Hokim-related flag rendered as a subtle indicator on signal items (e.g. small icon or badge)
+- The Hokim-related lane is a cross-cutting view. A signal with `hokim_related = true` can also appear in its service lane (Water, Electricity, Gas, or Waste), so intentional duplication between the Hokim-related lane and one service lane is allowed.
 
 ---
 
@@ -289,11 +314,11 @@ Semantic HTML structure; keyboard-navigable primary interactions. No formal WCAG
 - Signal item display: timestamp, sender reference, mahalla name, raw text snippet, tone badge, hokim-related indicator
 - Context drawer: same mahalla + same category + selected time range; clicked message auto-highlighted
 - Filters: time range (1h / 3h / 6h / Today / custom up to 7 days), mahalla, keyword search
-- Telegram bot: text message capture from monitored supergroups via webhook
+- Telegram bot: text and text-caption capture from monitored supergroups via webhook; media binaries are ignored for MVP
 - 20-minute AI batch pipeline: conservative centralized pre-filter + configurable AI classification model selected after implementation-time validation
 - Signal-only storage: raw messages deleted post-classification, signals retained 90 days
 - "Signals may be delayed" dashboard indicator (non-technical, hokim-visible)
-- Admin health endpoint: last batch time, queue status, bot connectivity (operator-only)
+- Admin health endpoint: last batch time, queue status, bot connectivity, recent processing errors, discard counts (operator-only)
 - Session-based auth: login, protected routes, no public registration
 - VPS deployment: Docker Compose + Nginx + Let's Encrypt + daily pg_dump backups
 
@@ -337,10 +362,10 @@ Semantic HTML structure; keyboard-navigable primary interactions. No formal WCAG
 
 ### Message Intake
 
-- **FR16:** The system captures in-scope text messages sent to monitored Telegram supergroups via an official Telegram bot
-- **FR17:** The system captures message metadata: Telegram message ID, chat/group ID, sender reference, sender display name snapshot, and timestamp
-- **FR18:** The system detects when the bot is removed from or loses access to a monitored group and alerts the operator
-- **FR19:** The system ignores non-text Telegram updates (photos, videos, voice, stickers, polls) for MVP unless Architecture explicitly decides to include text captions as in-scope text
+- **FR16:** The system captures in-scope text messages and textual captions sent to monitored Telegram supergroups via an official Telegram bot
+- **FR17:** The system captures message metadata: Telegram message ID, chat/group ID, sender reference, sender display name snapshot, timestamp, and whether the captured text came from `message.text` or `caption`
+- **FR18:** The system detects when the bot is removed from or loses access to a monitored group and exposes an operator-visible health alert state
+- **FR19:** The system ignores non-text Telegram updates (photos, videos, voice, stickers, polls, files, and similar media binaries) for MVP except for textual `caption` content, which is processed as text when present
 
 ### AI Classification Pipeline
 
@@ -353,7 +378,7 @@ Semantic HTML structure; keyboard-navigable primary interactions. No formal WCAG
 
 ### Signal Storage
 
-- **FR26:** The system stores classified signal messages with: signal ID, Telegram IDs, district ID, mahalla ID, sender reference, sender display name snapshot, timestamp, raw text, category, hokim-related flag, tone, optional short label, and processing timestamps
+- **FR26:** The system stores classified signal messages with: signal ID, Telegram IDs, district ID, mahalla ID, sender reference, sender display name snapshot, timestamp, raw text, text source (`message.text` or `caption`), category, hokim-related flag, tone, optional short label, and processing timestamps
 - **FR27:** The system retains signal messages for 90 days from capture date
 - **FR28:** The system does not store ignored messages after successful classification
 
@@ -391,9 +416,9 @@ Semantic HTML structure; keyboard-navigable primary interactions. No formal WCAG
 
 ### Reliability
 
-- **NFR11:** The Telegram webhook endpoint maintains 99% availability during pilot operating hours; outages exceeding 15 minutes trigger an operator alert
+- **NFR11:** The Telegram webhook endpoint maintains 99% availability during pilot operating hours; outages exceeding 15 minutes create an operator-visible health alert state
 - **NFR12:** The batch processing pipeline recovers automatically from transient AI API failures (up to 3 retry attempts) without operator intervention
-- **NFR13:** Daily automated database backups complete successfully; operator is alerted on backup failure
+- **NFR13:** Daily automated database backups complete successfully; backup failure creates an operator-visible health alert state
 - **NFR14:** No signal messages are lost due to system restarts or transient failures — the pipeline is idempotent per batch run
 
 ### Scalability
@@ -411,5 +436,6 @@ Before Architecture is finalized, explicitly validate:
 3. Telegram test group behavior: privacy mode/admin requirements, captions, forwarded messages, edited messages, anonymous admins, and bot removal events.
 4. Centralized pre-filter module design and unit tests.
 5. Hokim lane query behavior: `hokim_related = true` is a boolean cross-cutting view, not a category enum.
+6. Intentional duplicate display behavior for Hokim-related signals that also belong to a service lane.
 
 These validation notes do not expand MVP scope; they prevent architecture and stories from inheriting stale or overconfident technical assumptions.
