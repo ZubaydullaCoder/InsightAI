@@ -44,6 +44,8 @@ The purpose is to give AI assistants (and future collaborators) a persistent, se
 
 | Date | Decision | Rationale |
 |---|---|---|
+| 2026-05-21 | **Drawer displays corroborating signals in ascending chronological order, centered on the anchor signal** | The clicked signal is the temporal anchor. Signals before it appear above; signals after it appear below. Drawer auto-scrolls so the anchor is vertically centered on open — not pinned to the top. This preserves temporal causality so the hokim can distinguish an isolated incident from an escalating pattern without opening Telegram. No "selected" label badge is added — highlight state (left-border accent + category tint) is sufficient. |
+| 2026-05-21 | **Drawer `time_range` uses the user's currently active filter, not a fixed window** | Keeps drawer context consistent with what the user already sees in the lanes. Previously unspecified — confirmed and added to UX spec this session. |
 | 2026-05-16 | **MVP scope is fixed — no additions until pilot proven** | Explicitly confirmed: `project-raw-idea.md §6` defines exactly what ships. No feature additions regardless of how minor they seem. Pilot must prove the concept first. Post-pilot scope decisions driven by real usage feedback only. |
 | 2026-05-16 | **No AI accuracy hard targets in MVP** | Developer has not tested the classifier on real mahalla group data. Hard thresholds will be set after pilot data is collected and labeled. PRD records directional targets only. |
 | 2026-05-16 | **No vanity metrics in success criteria** | Signal counts, user activity analytics, and similar metrics are not success criteria. Success is behavioral: the hokim can reliably scan signals faster than reading raw chats, and continues using the product after the pilot period. |
@@ -58,6 +60,7 @@ The purpose is to give AI assistants (and future collaborators) a persistent, se
 
 | Date | Preference | Rationale / Observation |
 |---|---|---|
+| 2026-05-21 | **Latin Uzbek UI strings are build errors, not style preferences** | All user-facing strings must be Uzbek Cyrillic. Latin Uzbek strings (e.g. `soat`, `Qidirish`, `Bugun`) discovered during mockup review. Any string visible to the hokim or district staff must pass a Cyrillic-only review before shipping. Enforcement table documented in `ux-consistency-patterns.md`. |
 | 2026-05-21 | **Feature branch → PR → merge workflow for all significant planning/code changes** | Pushing directly to `main` is explicitly rejected. All changes go through: create feature branch → commit → push → open PR → review → merge. Applies to both planning artifacts and implementation code. |
 | 2026-05-21 | **Always `git fetch` + verify sync before creating a feature branch or pushing** | `git status` alone is insufficient — it only checks the locally cached remote state, not the actual current remote. Correct protocol every session: (1) `git fetch origin`, (2) `git log HEAD..origin/main --oneline` to detect if remote is ahead, (3) pull/rebase if diverged, (4) only then create branch and push. If a branch was already pushed from an out-of-sync base, rebase onto `origin/main` and use `git push --force-with-lease`. |
 | 2026-05-21 | **WCAG 2.1 Level AA is the accessibility compliance target** | GovTech/institutional context. Level A is insufficient; Level AAA is unnecessary. Contrast ratios, keyboard navigation, and ARIA labeling must all satisfy AA minimum. |
@@ -82,4 +85,4 @@ The purpose is to give AI assistants (and future collaborators) a persistent, se
 
 ---
 
-_Last updated: 2026-05-21_
+_Last updated: 2026-05-21 (afternoon session — UX spec sharding, mockup evaluation, spec gap fixes)_
