@@ -16,6 +16,8 @@ The purpose is to give AI assistants (and future collaborators) a persistent, se
 
 | Date | Preference | Rationale |
 |---|---|---|
+| 2026-05-21 | **Ant Design v5 (AntD) is the chosen component library for the frontend** | Desktop-first admin component coverage (Drawer, Skeleton, Alert, Select, DatePicker, Badge, Tag), full TypeScript support, CSS-in-JS design token system via ConfigProvider (no Tailwind conflict), and strong multi-script Uzbek Cyrillic rendering. shadcn/ui rejected (requires Tailwind); MUI rejected (Material aesthetics conflict with GovTech visual goals). |
+| 2026-05-21 | **Inter is the chosen font for Uzbek Cyrillic display** | Superior Cyrillic Unicode block coverage (U+0400–U+04FF) and excellent dense-information legibility at 11–14px on high-DPI desktop monitors. Loaded via Google Fonts with `display=swap` and `latin,latin-ext,cyrillic` subset. |
 | 2026-05-17 | **Prefer React + Vite SPA for MVP frontend** | The PRD does not require SSR, public SEO, server actions, or Next.js-specific features. A Vite SPA with React Router and TanStack Query is simpler and fits the dashboard use case better. Next.js remains possible only if Architecture identifies a concrete benefit. |
 | 2026-05-17 | **Prefer Drizzle ORM unless Architecture chooses Prisma intentionally** | Drizzle keeps SQL, indexes, enums, and query behavior explicit, which fits dashboard filtering and data correctness. Prisma is acceptable if beginner productivity is prioritized, but should be chosen consciously rather than by default. |
 | 2026-05-17 | **Use Zod for runtime validation** | TypeScript alone does not validate runtime inputs. Use Zod for environment/config parsing, API request/response validation, Telegram-derived payload normalization, and AI structured output validation. |
@@ -56,6 +58,8 @@ The purpose is to give AI assistants (and future collaborators) a persistent, se
 
 | Date | Preference | Rationale / Observation |
 |---|---|---|
+| 2026-05-21 | **Feature branch → PR → merge workflow for all significant planning/code changes** | Pushing directly to `main` is explicitly rejected. All changes go through: create feature branch → commit → push → open PR → review → merge. Applies to both planning artifacts and implementation code. |
+| 2026-05-21 | **WCAG 2.1 Level AA is the accessibility compliance target** | GovTech/institutional context. Level A is insufficient; Level AAA is unnecessary. Contrast ratios, keyboard navigation, and ARIA labeling must all satisfy AA minimum. |
 | 2026-05-17 | **Patch research/context before architecture when validation changes assumptions** | Architecture and stories must not inherit stale technical assumptions. When research is corrected, update the technical research, preference log, session context, and affected PRD wording before moving forward. |
 | 2026-05-16 | **No time-of-day assumptions in product narratives or journeys** | Domain research described the hokim's "morning briefing" as background context about the current state. This must never bleed into product documentation as a usage constraint. The dashboard is on-demand — the hokim uses it whenever situational awareness is needed, not on a fixed schedule. |
 | 2026-05-15 | **Commit and push to GitHub at end of each working session** | Explicitly requested. Keeps remote in sync; prevents work loss between sessions. |
@@ -77,4 +81,4 @@ The purpose is to give AI assistants (and future collaborators) a persistent, se
 
 ---
 
-_Last updated: 2026-05-17_
+_Last updated: 2026-05-21_
