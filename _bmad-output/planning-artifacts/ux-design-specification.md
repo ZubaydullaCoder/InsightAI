@@ -68,10 +68,16 @@ The context drawer is a **fixed-width overlay panel** (~380px at 1920×1080; ~34
 | *Газ* | `category = gas AND mahalla_id = X AND time_range` |
 | *Ҳокимга тегишли* | `hokim_related = true AND mahalla_id = X AND time_range` |
 
-The drawer header always shows a persistent breadcrumb: `[Lane Name] · [Mahalla Name] · [Signal Timestamp]`
-Example: `Газ · Навбаҳор маҳалласи · 10:42`
+**Drawer breadcrumb in the Ҳокимга тегишли lane:**
+When the clicked card originated from the *Ҳокимга тегишли* lane, the breadcrumb shows the signal's **actual service category**, not the lane name:
+- Example: `Газ · Навбаҳор маҳалласи · 10:42` *(not `Ҳокимга тегишли · ...`)*
 
-This ensures the user always knows which signal is active, even after scrolling its card out of view.
+Rationale: The hokim opened the drawer from the priority lane but needs to know *which service* is affected. The lane name adds no evidence value once the drawer is open — the category does.
+
+For all other lanes the breadcrumb shows the lane name as normal:
+- Example: `Сув · Олмазор маҳалласи · 09:15`
+
+This ensures the user always knows which signal is active and which service it concerns, even after scrolling its card out of view.
 
 ### Effortless Interactions
 
@@ -739,11 +745,31 @@ Only 2 components require custom implementation — they have no AntD equivalent
 **Props:**
 ```typescript
 interface LaneGridProps {
-  signals: SignalsByCategory;       // pre-grouped by category
+  signals: SignalsByCategory;       // pre-grouped by category (see duplication rule below)
   activeSignalId: string | null;    // highlights the active card
   onCardClick: (signal: Signal) => void;
 }
 ```
+
+**Hokim-related duplication rule (PRD FR — intentional):**
+A signal with `hokim_related = true` must appear in **both** the `hokim` lane and its original service category lane. The `SignalsByCategory` grouping produced by `<DashboardPage>` must implement this explicitly:
+
+```typescript
+type LaneKey = 'hokim' | 'suv' | 'elektr' | 'gaz' | 'chiqindi';
+type SignalsByCategory = Record<LaneKey, Signal[]>;
+
+// Grouping logic (pseudocode):
+for (signal of allSignals) {
+  lanes[signal.category].push(signal);          // always in service lane
+  if (signal.hokim_related) {
+    lanes['hokim'].push(signal);                // also in hokim lane
+  }
+}
+```
+
+The same `Signal` object is referenced (not copied) in both lanes. The `<SignalCard>` rendered in each lane receives the lane's own `categoryColor` prop, so the card visually adapts per lane (see `<SignalCard>` spec below).
+
+**Count badge rule:** The lane header count badge reflects the number of cards in that lane after grouping — a duplicated signal increments the count in *both* the Hokim lane and its service lane. This is intentional: the hokim sees the full priority count in the Hokim lane without the service lane counts being suppressed.
 
 **States:**
 
@@ -769,7 +795,7 @@ interface LaneGridProps {
 **Anatomy:**
 ```
 <SignalCard>
-  ├── left border (4px, categoryColor)
+  ├── left border (4px, categoryColor)           ← always the SERVICE category color
   ├── card-meta row
   │    ├── sender name (13px/600)
   │    └── timestamp (11px/400, right-aligned)
@@ -777,8 +803,20 @@ interface LaneGridProps {
   ├── message text (13px/400, 3-line clamp)
   └── card-footer
        ├── ToneBadge (AntD Tag, non-interactive)
+       ├── CaptionBadge (📷 icon, visible only if text_source = 'caption')
        └── HokimStar (★ icon, visible only if hokim_related=true)
 ```
+
+**Color rule when rendered inside the Ҳокимга тегишли lane:**
+The `categoryColor` prop passed to `<SignalCard>` is **always the signal's original service category color**, even when the card is rendered inside the Hokim lane. The Hokim lane has no color of its own for card borders.
+
+| Signal | Rendered in | `categoryColor` passed |
+|---|---|---|
+| `category=gaz, hokim_related=true` | Hokim lane | Gas yellow `#854D0E bg` |
+| `category=gaz, hokim_related=true` | Газ lane | Gas yellow `#854D0E bg` |
+| `category=suv, hokim_related=false` | Сув lane | Water blue |
+
+Rationale: the hokim must instantly know *which service* a Hokim-lane card concerns without opening the drawer. Color is the fastest signal — it must never be overridden by lane membership.
 
 **Props:**
 ```typescript
@@ -809,6 +847,7 @@ interface SignalCardProps {
 - Text clamped to 3 lines. Full text shown only inside the context drawer.
 - Sender fallback chain: Display Name → `@username` → *Резидент*.
 - Timestamp: relative (*10 дақ. олдин*) for signals ≤24h old; absolute (`HH:MM`) for older signals.
+- **Caption source indicator:** If `signal.text_source === 'caption'`, the `CaptionBadge` (📷 icon, 11px, `colorTextPlaceholder`, `aria-label="Rasm tavsifi"`) is shown in the card footer. It communicates that the text came from a photo caption, not a plain text message. It is non-interactive and carries no color — it must not compete visually with the ToneBadge. The full text is still displayed as normal; only the source provenance changes.
 
 ### Component Implementation Strategy
 
