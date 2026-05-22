@@ -18,14 +18,19 @@ The context drawer is a **fixed-width overlay panel** (~380px at 1920×1080; ~34
 
 - **Backdrop:** A very light semi-transparent backdrop (`rgba(0,0,0,0.08)`) softens the partially covered lanes without hiding them.
 - **Close triggers:** Explicit ✕ button in the drawer header, clicking the backdrop, or pressing Escape.
-- **Hokim-related lane context rule:** The drawer's context query is determined by **the lane the user clicked from**, not the signal's stored service category.
+- **Hokim-related lane context rule:** The *Ҳокимга тегишли* lane is only a priority entry point. When a user clicks a signal from this lane, the drawer behaves exactly like other lanes: it uses the clicked signal's original service category, mahalla/group scope, and active time range. The drawer must not filter context to only `hokim_related = true` signals.
 
-| Lane Clicked From | Drawer Query |
-|---|---|
-| *Газ* | `category = gas AND mahalla_id = X AND time_range` |
-| *Ҳокимга тегишли* | `hokim_related = true AND mahalla_id = X AND time_range` |
+| Lane Clicked From | Clicked Signal | Drawer Query |
+|---|---|---|
+| *Газ* | `category = gas` | `category = gas AND mahalla_id = X AND time_range` |
+| *Ҳокимга тегишли* | `category = gas AND hokim_related = true` | `category = gas AND mahalla_id = X AND time_range` |
+| *Ҳокимга тегишли* | `category = suv AND hokim_related = true` | `category = suv AND mahalla_id = X AND time_range` |
+
+**Forbidden drawer query:** clicking from the *Ҳокимга тегишли* lane must not use `hokim_related = true AND mahalla_id = X AND time_range` as the drawer context. The hokim lane changes how the signal is discovered, not how its local evidence context is built.
 
 **`time_range` in drawer query:** The drawer uses the user's **currently active time-range filter** (e.g. Бугун, 6 соат, custom range) — not a fixed window. This keeps drawer context consistent with what the user already sees in the lanes.
+
+**Mahalla/group scope note for Architecture:** MVP copy and UI use mahalla terminology. Architecture must confirm whether the exact drawer query scope is `mahalla_id` or `telegram_chat_id` if one mahalla can have multiple monitored Telegram groups. Until then, UX language remains `mahalla_id` to stay aligned with the PRD.
 
 **Drawer breadcrumb in the Ҳокимга тегишли lane:**
 When the clicked card originated from the *Ҳокимга тегишли* lane, the breadcrumb shows the signal's **actual service category**, not the lane name:
@@ -77,8 +82,8 @@ Filtering by mahalla, switching time range presets, and searching by keyword ope
 
 ## Critical Success Moments
 
-**The "60-Second Briefing" (Primary Success):**
-The governor opens the app, spots a cluster of *Шикоят* (Complaint) tone badges in the *Электр* lane from Олмазор маҳалласи, clicks one card, and reads three corroborating citizen statements in the drawer — all within 60 seconds and without reading a single raw Telegram chat.
+**The "60-Second Signal Scan" (Primary Success):**
+The governor opens the app whenever situational awareness is needed, spots a cluster of *Шикоят* (Complaint) tone badges in the *Электр* lane from Олмазор маҳалласи, clicks one card, and reads three corroborating citizen statements in the drawer — all within 60 seconds and without reading a single raw Telegram chat.
 
 **Delay Grace Mode (Make-or-Break Trust Moment):**
 When the AI classifier batch is running slow, the UI never shows an error modal or a blank dashboard. Instead, a non-intrusive amber status banner appears below the filter bar:
