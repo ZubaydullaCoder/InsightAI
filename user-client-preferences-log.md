@@ -65,8 +65,8 @@ The purpose is to give AI assistants (and future collaborators) a persistent, se
 
 | Date | Preference | Rationale / Observation |
 |---|---|---|
+| 2026-05-22 | **Use minimal GitHub Flow; Issues are optional** | Solo-founder AI-assisted development should stay lightweight. `main` remains stable. Meaningful planning, documentation, and code changes use one short-lived branch, PR review, same-branch review fixes, squash merge, and branch deletion. GitHub Issues are skipped by default and used only as a parking lot for deferred, unclear, large, or future work. No sub-branches, GitFlow, `develop`, or release branches by default. |
 | 2026-05-21 | **Latin Uzbek UI strings are build errors, not style preferences** | All user-facing strings must be Uzbek Cyrillic. Latin Uzbek strings (e.g. `soat`, `Qidirish`, `Bugun`) discovered during mockup review. Any string visible to the hokim or district staff must pass a Cyrillic-only review before shipping. Enforcement table documented in `ux-consistency-patterns.md`; Architecture must now define the technical enforcement mechanism. |
-| 2026-05-21 | **Feature branch → PR → merge workflow for all significant planning/code changes** | Pushing directly to `main` is explicitly rejected. All changes go through: create feature branch → commit → push → open PR → review → merge. Applies to both planning artifacts and implementation code. |
 | 2026-05-21 | **Always `git fetch` + verify sync before creating a feature branch or pushing** | `git status` alone is insufficient — it only checks the locally cached remote state, not the actual current remote. Correct protocol every session: (1) `git fetch origin`, (2) `git log HEAD..origin/main --oneline` to detect if remote is ahead, (3) pull/rebase if diverged, (4) only then create branch and push. If a branch was already pushed from an out-of-sync base, rebase onto `origin/main` and use `git push --force-with-lease`. |
 | 2026-05-17 | **Patch research/context before architecture when validation changes assumptions** | Architecture and stories must not inherit stale technical assumptions. When research is corrected, update the technical research, preference log, session context, and affected PRD wording before moving forward. |
 | 2026-05-16 | **No time-of-day assumptions in product narratives or journeys** | Domain research described the hokim's "morning briefing" as background context about the current state. This must never bleed into product documentation as a usage constraint. The dashboard is on-demand — the hokim uses it whenever situational awareness is needed, not on a fixed schedule. |
@@ -89,4 +89,4 @@ The purpose is to give AI assistants (and future collaborators) a persistent, se
 
 ---
 
-_Last updated: 2026-05-22 (UX cleanup: drawer context, color tokens, accessibility model, journey wording, MVP dropdown scope, and Architecture handoff notes)_
+_Last updated: 2026-05-22 (UX cleanup and minimal GitHub Flow preference)_
