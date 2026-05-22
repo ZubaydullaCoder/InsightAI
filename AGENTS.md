@@ -6,7 +6,7 @@
 *   **Dependencies & Anti-Fabrication:** Manage dependencies locally in configs (e.g., package.json), never globally. Verify package existence and behavior by inspecting source code or docs to prevent supply chain attacks (no hallucinated packages/APIs). Avoid deprecated APIs.
 *   **Security, Testing & Verification:** Write testable, secure code (enforce validation/sanitization). Always run type-checks and linters before reporting completion; do not rely on write tool success logs. Maintain or write unit tests for complex logic.
 
-## Workspace & File Operations (Detailed)
+## Workspace & File Operations 
 *   **Context Discovery & Review:** Before making architectural decisions, proposing plans, or writing code, actively search for and thoroughly review all relevant files in the workspace. Never make decisions based on blind assumptions about the codebase.
 *   **Complex Task Planning:** For any non-trivial, architectural, or complex changes, you must always propose a step-by-step plan first and wait for explicit user approval before modifying files—even if a plan was not explicitly requested.
 *   **Agentic File Ops & Context Decay:** You have access to read, edit, and delete actions. Never trust your memory of file contents in conversations with 10+ messages; always re-read files before editing. Read files >500 LOC in sequential chunks (max 2000 lines/read) using offset/limit. Ensure strict intra-file consistency. Immediately after editing, re-read the file to verify the patch applied successfully. Resolve codebase-wide cascading impacts.
