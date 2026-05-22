@@ -1,8 +1,8 @@
 # User Journey Flows
 
-## Journey 1: Daily Morning Briefing (Primary — Hokim)
+## Journey 1: On-Demand Signal Scan (Primary — Hokim)
 
-**Goal:** Hokim opens the dashboard at the start of the day, identifies the most pressing district issue, and forms an evidence-based briefing statement in under 60 seconds.
+**Goal:** Hokim opens the dashboard whenever situational awareness is needed, identifies the most pressing district issue, and forms an evidence-based understanding in under 60 seconds.
 
 **Entry point:** Dashboard URL opens to default “Today” time range. All 5 lanes populate via skeleton shimmer → real cards.
 
@@ -31,7 +31,7 @@ flowchart TD
     Q -->|Close| R[Press Escape / ✕ / backdrop click]
     Q -->|Swap card| S[Click new card → header updates instantly → shimmer → new content]
     S --> Q
-    R --> T([Briefing statement formed — session complete])
+    R --> T([Signal understanding formed — session complete])
 ```
 
 **Optimization notes:**
@@ -50,7 +50,7 @@ flowchart TD
 ```mermaid
 flowchart TD
     A([Dashboard open — all mahallas visible]) --> B[User clicks Mahalla filter]
-    B --> C[Dropdown opens — mahallas listed with signal counts]
+    B --> C[Dropdown opens — mahallas listed by name]
     C --> D[User selects target mahalla e.g. Навбаҳор]
     D --> E[Client-side filter applies <300ms — no API call]
     E --> F{Lanes update}
@@ -72,7 +72,7 @@ flowchart TD
 ```
 
 **Optimization notes:**
-- Mahalla dropdown must show signal counts per mahalla (e.g., `Навбаҳор маҳалласи (9)`) to help the user prioritize.
+- MVP mahalla dropdown only needs clear mahalla selection. Signal counts inside dropdown options are optional post-pilot polish, not a pilot requirement.
 - Filter state persists across drawer open/close cycles. It resets only on explicit “Clear” action.
 - Clearing the filter must restore the pre-filter scroll positions in all lanes.
 
