@@ -1,6 +1,6 @@
 # Session Handoff — Mahalla Ovozi
 
-_Last updated: 2026-05-21_
+_Last updated: 2026-05-22_
 
 ## Purpose
 
@@ -21,68 +21,61 @@ Permanent decisions and artifacts live in the PRD, research docs, UX spec shards
 
 ## Current Phase
 
-- PRD: ✅ Complete (validated + patched 2026-05-18).
-- Technical research: ✅ Corrected and directionally valid; unstable implementation details flagged for validation.
-- Implementation readiness assessment: ✅ Ran 2026-05-17 — was **not ready** (UX/Arch/Epics missing at that time).
-- UX Design: ✅ **Complete and sharded** — 14-step spec produced (2026-05-20), evaluated against mockup, 3 shards refactored with gap fixes (2026-05-21 afternoon).
-- Architecture: ❌ Not started. **This is the confirmed next step.**
-- Epics & Stories: ❌ Not started.
-- App implementation: ❌ Not started.
+- PRD: complete.
+- Technical research: corrected and directionally valid; unstable implementation details flagged for validation.
+- Implementation readiness assessment: complete; previous result was not ready because UX, Architecture, and Epics/Stories were missing.
+- UX Design: complete and sharded; cleanup patches applied on 2026-05-22.
+- Architecture: not started.
+- Epics & Stories: not started.
+- App implementation: not started.
 
 ---
 
-## What Changed in This Session (2026-05-21 Afternoon)
+## What Changed in This Session
 
-### 1. UX Spec Sharded
-- `_bmad-output/planning-artifacts/ux-design-specification.md` was sharded using `npx @kayvan/markdown-tree-parser explode`.
-- Original monolith (65KB, 1,093 lines) deleted after sharding confirmed successful.
-- **Output: 12 section files + index.md** in `_bmad-output/planning-artifacts/ux-design-specification/`.
+All changes are spec/documentation-level only. No app implementation code was created.
 
-### 2. UX Spec Evaluated Against Mockup
-A dashboard mockup image was provided by the user. The spec was cross-checked against it. The following were confirmed correctly implemented in the mockup:
-- Five-lane layout, sticky headers, count badges, category-colored left borders.
-- Card anatomy (sender / mahalla / timestamp / text / tone badge).
-- Amber delay banner (exact correct text).
-- Context drawer with breadcrumb.
-- Active card highlight.
-- Warm off-white background palette.
+### UX cleanup patches applied
 
-The following issues were identified:
+- `core-user-experience.md`
+  - Corrected Hokim-related drawer behavior.
+  - The Hokim-related lane is only a priority entry point.
+  - Drawer context now always uses the clicked signal's original service category plus mahalla/group scope plus active time range.
+  - Explicitly forbids filtering drawer context only to `hokim_related=true` signals.
+  - Added Architecture note to decide exact drawer query scope: `mahalla_id` vs `telegram_chat_id`.
+  - Renamed the primary success moment from briefing wording to signal-scan wording.
 
-| Severity | Issue |
-|---|---|
-| 🔴 Critical | Latin/Cyrillic mixing across ~8 UI strings (time chips, search placeholder, drawer subtitle) |
-| 🔴 Critical | `Барчасини кўриш (N) >` footer at bottom of each lane — contradicts virtual scroll spec |
-| 🔴 Critical | Three-dot `⋮` action menus on drawer signal cards — contradicts passive monitoring principle |
-| 🔴 Critical | `Барча алоқадор сигналларни кўриш` footer button in drawer — contradicts spec |
-| 🟡 Medium | Missing `1 соат` time preset chip (spec requires 4 presets: 1h/3h/6h/Today) |
-| 🟡 Medium | Unexplained green dot indicators on some lane cards — undefined visual affordance |
-| 🟡 Medium | CaptionBadge label `Фото олинган` — wrong translation, wrong script |
-| 🟡 Medium | `Танланган сигнал` label badge on drawer anchor card — over-communicates; highlight state is sufficient |
+- `component-strategy.md`
+  - Fixed Gas color token examples to Gas teal `#1A7060`.
+  - Clarified that Hokim-lane cards still use the original service category color.
+  - Added explicit note that Hokim-lane card clicks open the same category-based drawer as any other lane.
 
-### 3. New Spec Gap Discovered and Resolved
-- **Drawer temporal anchor behavior** was identified as unspecified in the original UX spec.
-- User confirmed: the drawer should display all corroborating signals in ascending chronological order, with the clicked (anchor) signal vertically centered in the drawer body — signals before it appear above, signals after it appear below.
+- `user-journey-flows.md`
+  - Renamed Journey 1 to “On-Demand Signal Scan.”
+  - Removed start-of-day assumption.
+  - Changed completion wording to “signal understanding formed.”
+  - Changed Mahalla dropdown from “listed with signal counts” to “listed by name.”
+  - Marked dropdown signal counts as optional post-pilot polish, not MVP scope.
 
-### 4. Three UX Spec Shards Refactored
-All changes are spec-level only (no implementation code changed).
+- `responsive-design-accessibility.md`
+  - Clarified WCAG 2.1 AA as an internal MVP quality target, not a formal external pilot audit requirement.
+  - Clarified accepted MVP limitations.
+  - Resolved drawer accessibility contradiction by choosing AntD Drawer default dialog/focus behavior for MVP.
 
-**`core-user-experience.md`:**
-- Added explicit `time_range` definition: drawer uses the user's **currently active filter**, not a fixed window.
-- Added full **Drawer Temporal Anchor Rule** section (ascending order, centered anchor, fetch strategy, empty drawer state).
+- `ux-consistency-patterns.md`
+  - Added Architecture handoff for UI string enforcement.
+  - Requires a typed UI string dictionary/module and lightweight Latin Uzbek slip-through test/lint check.
+  - Clarifies that enforcement must not block raw resident text, Telegram sender names, logs, test fixtures, or classifier examples.
 
-**`component-strategy.md`:**
-- Added **no lane pagination footer** rule (`Барчасини кўриш` banned by name).
-- Fixed `CaptionBadge` `aria-label` to `Расм тавсифи` (Cyrillic).
-- Added **no unspecified status indicators** rule (green dots, colored circles explicitly prohibited).
-- Added new **Drawer Card Rules** section: no action menus, no pagination footer, no "selected" label badge, full text in drawer (no 3-line clamp inside drawer).
+- `design-direction-decision.md`
+  - Fixed relative link to `ux-design-directions.html`.
+  - Marked the HTML prototype as static reference only, not implementation source of truth.
+  - Clarified that the sharded UX spec is the source of truth.
+  - Reworded compact-density rationale to avoid morning-only usage framing.
 
-**`ux-consistency-patterns.md`:**
-- Added drawer pattern table rows: signal ordering (ascending), temporal anchor (centered), anchor highlight (highlight only, no badge).
-- Updated filter table: `1 соат` preset added (was missing); all preset labels now Cyrillic.
-- Added preset chip Cyrillic reference table (correct vs. ~~wrong Latin~~ side-by-side).
-- Added Cyrillic string enforcement table with 5 concrete mandatory corrections.
-- Added hard rule: Latin Uzbek strings = build errors, not style preferences.
+- `user-client-preferences-log.md`
+  - Added confirmed product decisions for corrected Hokim-related drawer behavior, MVP dropdown count scope, and WCAG AA scope boundary.
+  - Added architectural preferences for drawer scope validation and UI string enforcement.
 
 ---
 
@@ -93,8 +86,8 @@ All changes are spec-level only (no implementation code changed).
 - Bot: grammY + Telegram webhooks.
 - Backend: Fastify with strict modules.
 - Frontend: React + Vite SPA, React Router, TanStack Query.
-- Component library: **Ant Design v5**.
-- Font: **Inter** (Cyrillic subset via Google Fonts).
+- Component library: Ant Design v5.
+- Font: Inter with Cyrillic subset.
 - Database: PostgreSQL.
 - Queue/worker: Redis + BullMQ.
 - ORM default: Drizzle.
@@ -104,28 +97,26 @@ All changes are spec-level only (no implementation code changed).
 - Runtime topology: one repo, separate `web` and `worker` processes/containers.
 - `hokim_related` is a boolean flag, never a category enum value.
 - MVP scope is fixed; no new features until pilot proves the concept.
-- Accessibility target: **WCAG 2.1 Level AA**.
+- Accessibility target: WCAG 2.1 AA internal MVP quality target.
 - Git workflow: feature branch → PR → review → merge. No direct pushes to `main`.
 
 ---
 
-## Key UX Design Decisions (for Architecture and Implementation)
+## Key UX Decisions
 
-- **Visual direction: Direction A — Compact Scan.** 3-line text clamp (lane cards only; full text in drawer), 7px card gap, 56px filter bar, `#FFFFFF` filter bar background.
-- **5 lane categories (Uzbek Cyrillic):** Ҳокимга тегишли, Сув, Электр, Газ, Чиқинди. Each has a semantic color token (left-border accent).
-- **Category colors:** Ҳокимга тегишли `#7C2D56`, Сув `#1D6FA4`, Электр `#B45309`, Газ `#1A7060`, Чиқинди `#5C6B2E`.
-- **Sender display policy:** Telegram Display Name → `@username` → *Резидент*.
-- **Context drawer:** 250ms slide-in overlay (380px at ≥1440px / 340px at 1024–1279px), no lane reflow. Breadcrumb updates instantly on card swap; body shows skeleton shimmer then content.
-- **Drawer temporal anchor:** Signals rendered ascending chronological order. Anchor signal vertically centered in drawer body on open. Signals before = above; signals after = below. No "selected" badge — highlight state only.
-- **Drawer `time_range`:** Uses the user's currently active filter, not a fixed window.
-- **Drawer card constraints:** No action menus, no pagination footer, full text (no 3-line clamp).
-- **Lane constraint:** No pagination footer. Continuous virtual scroll.
-- **Client-side operations** (mahalla filter, keyword search, preset time slices) must be instant (<300ms) — never show skeleton shimmer.
-- **Custom components:** `<LaneGrid>` (5-column virtual scroll) and `<SignalCard>` (pure presentational). All others from AntD v5.
-- **All UI copy is Uzbek Cyrillic. No Latin Uzbek. Latin strings = build errors.**
-- **Time preset chips (Cyrillic mandatory):** `1 соат`, `3 соат`, `6 соат`, `Бугун`, `Кеча`, `7 кун`.
-- **Responsive:** Desktop-only. Hard block at `<1024px`. Breakpoints at 1279px (condensed) and 1440px (expanded).
-- **No modal dialogs, no toast notifications, no `confirm()` in MVP.**
+- Visual direction: Direction A — Compact Scan.
+- Category colors: Hokim `#7C2D56`, Suv `#1D6FA4`, Elektr `#B45309`, Gaz `#1A7060`, Chiqindi `#5C6B2E`.
+- Sender display policy: Telegram Display Name → `@username` → `Резидент`.
+- Context drawer: overlay drawer; no lane reflow; breadcrumb updates on card swap; body skeleton while loading.
+- Hokim-related drawer rule: the lane is only a priority entry point. Drawer context uses the clicked signal's original service category plus mahalla/group scope plus active time range. It does not filter drawer context to only `hokim_related=true` signals.
+- Drawer temporal anchor: ascending chronological order; anchor centered; no selected badge.
+- Drawer cards: no action menus, no pagination footer, full text.
+- Lane: no pagination footer; continuous virtual scroll.
+- Mahalla dropdown: name selection only for MVP; counts are post-pilot polish.
+- UI copy: Uzbek Cyrillic for production dashboard strings.
+- Time chips: `1 соат`, `3 соат`, `6 соат`, `Бугун`, `Кеча`, `7 кун`.
+- Responsive: desktop-only; hard block below `1024px`.
+- Prototype status: `ux-design-directions.html` is static reference only; sharded UX spec is source of truth.
 
 ---
 
@@ -135,20 +126,22 @@ All changes are spec-level only (no implementation code changed).
 - Uzbek/Russian mixed-message classifier quality using a 100–200 message benchmark.
 - Telegram test group behavior: privacy mode/admin requirements, captions, forwarded messages, edited messages, anonymous admins, and bot removal events.
 - Exact BullMQ scheduler API/version.
-- Conservative pre-filter thresholds, especially short civic texts (`gaz?`, `suv?`, `tok?`, `svet?`).
-- Caption text (`message.caption`) — confirmed in-scope for MVP intake per updated PRD FR17.
+- Conservative pre-filter thresholds, especially short civic texts.
+- Exact drawer query scope: `mahalla_id` vs `telegram_chat_id` if one mahalla can have multiple monitored Telegram groups.
+- UI string enforcement mechanism: typed dictionary/module plus lightweight Cyrillic slip-through test/lint check.
 
 ---
 
 ## Recently Changed Files
 
-- `_bmad-output/planning-artifacts/ux-design-specification/` (directory) — created by sharding; contains 12 section shards + `index.md`.
-- `_bmad-output/planning-artifacts/ux-design-specification.md` — **deleted** (replaced by shards).
-- `_bmad-output/planning-artifacts/ux-design-specification/core-user-experience.md` — refactored: `time_range` definition + Drawer Temporal Anchor Rule added.
-- `_bmad-output/planning-artifacts/ux-design-specification/component-strategy.md` — refactored: no lane pagination footer, no unspecified indicators, CaptionBadge fix, Drawer Card Rules section added.
-- `_bmad-output/planning-artifacts/ux-design-specification/ux-consistency-patterns.md` — refactored: drawer ordering rows, `1 соат` preset, Cyrillic chip labels table, Cyrillic string enforcement table.
-- `user-client-preferences-log.md` — updated with new entries from this session.
-- `session-handoff.md` — this file; rewritten.
+- `_bmad-output/planning-artifacts/ux-design-specification/core-user-experience.md`
+- `_bmad-output/planning-artifacts/ux-design-specification/component-strategy.md`
+- `_bmad-output/planning-artifacts/ux-design-specification/user-journey-flows.md`
+- `_bmad-output/planning-artifacts/ux-design-specification/responsive-design-accessibility.md`
+- `_bmad-output/planning-artifacts/ux-design-specification/ux-consistency-patterns.md`
+- `_bmad-output/planning-artifacts/ux-design-specification/design-direction-decision.md`
+- `user-client-preferences-log.md`
+- `session-handoff.md`
 
 ---
 
@@ -156,4 +149,4 @@ All changes are spec-level only (no implementation code changed).
 
 Do not treat this file as a full project source of truth. Use it only as quick orientation, then inspect the relevant repo files before making decisions or edits.
 
-The UX spec is now sharded — start from `_bmad-output/planning-artifacts/ux-design-specification/index.md` to navigate it. Do not look for `ux-design-specification.md` — it no longer exists.
+The UX spec is sharded — start from `_bmad-output/planning-artifacts/ux-design-specification/index.md` to navigate it.
