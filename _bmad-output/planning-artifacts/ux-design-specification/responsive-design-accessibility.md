@@ -44,7 +44,9 @@ No tablet or mobile breakpoints are defined. If the pilot reveals tablet use (e.
 
 ## Accessibility Strategy
 
-**Target compliance: WCAG 2.1 Level AA** — the standard for government and institutional digital tools.
+**Target compliance: WCAG 2.1 Level AA** for MVP contrast, keyboard navigation, focus visibility, semantic structure, and core ARIA behavior. This is an internal project quality target, not a formal external accessibility audit requirement for the pilot.
+
+Accepted MVP limitations remain: no mobile layout, no high-contrast OS mode support, no formal external audit, and no `prefers-reduced-motion` support unless Architecture decides to add it within MVP constraints.
 
 ### Contrast Pairs (all pre-validated in Step 8)
 
@@ -66,9 +68,15 @@ No tablet or mobile breakpoints are defined. If the pilot reveals tablet use (e.
 | Lane columns | `role="feed"` + `aria-label` (category Uzbek Cyrillic name) |
 | Filter chips | Native `<button>` elements — keyboard accessible by default |
 | Mahalla `Select` | AntD `Select` — keyboard accessible by default |
-| Drawer close | `<button aria-label="Yopish">` |
-| Escape to close | `document.addEventListener('keydown', e => e.key === 'Escape' && closeDrawer())` |
-| Focus trap | Not applied — drawer is an overlay, not a modal; trapping would prevent lane access |
+| Drawer close | AntD Drawer close control with Uzbek Cyrillic accessible label `Ёпиш` |
+| Escape to close | Use AntD Drawer default keyboard handling; do not add competing global Escape listeners unless implementation verifies no duplicate close behavior |
+| Drawer focus handling | Use AntD Drawer default focus management. Do not disable focus handling unless Architecture intentionally defines and tests a correct non-modal side-panel ARIA pattern |
+
+### Drawer Accessibility Model
+
+For MVP, the context drawer uses **AntD Drawer's default dialog accessibility model**. This means the drawer is treated as a focused overlay surface for assistive technology. The lane grid remains visually visible behind the drawer, but keyboard focus should follow AntD Drawer defaults while the drawer is open.
+
+Do not simultaneously document or implement the drawer as a non-modal overlay with `aria-modal` semantics. If a later phase requires interacting with lane cards while the drawer remains open via keyboard, Architecture must define a separate non-modal side-panel pattern and verify it with accessibility testing.
 
 ### Screen Reader ARIA Spec
 
@@ -78,7 +86,7 @@ No tablet or mobile breakpoints are defined. If the pilot reveals tablet use (e.
 | `<SignalCard>` | `role="article"` + `aria-label="{senderName}, {mahalla}, {relativeTime}"` |
 | Tone badge | `aria-hidden="true"` (visual only; info in card aria-label) |
 | Hokim star | `aria-hidden="true"` (decorative) |
-| Drawer | AntD `Drawer` ships with `role="dialog"` + `aria-modal` |
+| Drawer | AntD `Drawer` default dialog semantics; preserve default ARIA and focus behavior unless Architecture replaces it intentionally |
 | Delay banner | AntD `Alert` ships with `role="alert"` |
 | Loading lane | `aria-busy="true"` on `<LaneColumn>` during skeleton state |
 
@@ -95,7 +103,7 @@ Not applicable for MVP (desktop-only, mouse input). If tablet support is added i
 
 **Accessibility testing:**
 - Automated: `axe-core` via `@axe-core/react` in development mode (console warnings)
-- Manual keyboard: tab through all interactive elements, confirm Escape closes drawer, confirm no unintended focus trap
+- Manual keyboard: tab through all interactive elements, confirm Escape closes drawer, confirm AntD Drawer focus behavior is not accidentally disabled
 - Contrast: spot-check with Chrome DevTools accessibility tree
 - Screen reader: NVDA on Windows + Chrome (most common in CIS government environments)
 
