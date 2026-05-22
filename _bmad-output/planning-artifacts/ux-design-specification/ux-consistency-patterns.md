@@ -114,4 +114,15 @@ Every element must communicate its interactivity through visual design alone —
 
 **Rule:** Any string visible to the hokim or district staff must pass a Cyrillic-only review before shipping. Latin Uzbek strings are treated as build errors, not style preferences.
 
+### Architecture Handoff: UI String Enforcement
+
+Architecture must define a lightweight technical enforcement mechanism for user-facing copy before implementation starts:
+
+- Centralize production UI strings in one typed dictionary/module rather than scattering inline strings across React components.
+- Keep user-facing dashboard strings in Uzbek Cyrillic; English is allowed only for developer-facing identifiers, comments, logs, tests, or accessibility fallbacks explicitly documented by Architecture.
+- Add a simple test or lint script that scans the production UI string dictionary for common Latin Uzbek slip-throughs such as `soat`, `Bugun`, `Qidirish`, `Barcha`, and `mahallalar`.
+- Treat violations as build/test failures in CI once CI exists; before CI exists, run the check manually before PR merge.
+
+This enforcement is intentionally narrow. It should not block Telegram sender display names, raw resident message text, logs, test fixtures, or AI/classifier examples, because those may legitimately contain Latin, Russian, mixed script, or user-generated content.
+
 ---
