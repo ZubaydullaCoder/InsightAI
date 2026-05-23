@@ -8,7 +8,7 @@ Rather than mobile-first, the product uses a **desktop-first, range-optimized** 
 
 | Viewport Range | Strategy |
 |---|---|
-| `< 1024px` | Hard block: *“Mahalla Ovozi faqat kompyuter ekranida ishlaydi”* centered message, app shell hidden |
+| `< 1024px` | Hard block: *"Маҳалла Овози фақат компьютер экранида ишлайди"* centered message, app shell hidden |
 | `1024px – 1279px` | Condensed: drawer `340px`, card padding `10px 12px`, filter chips compressed |
 | `1280px – 1439px` | Standard: all specs at documented defaults |
 | `≥ 1440px` | Expanded: drawer `380px`, lane column `min-width: 220px` |
