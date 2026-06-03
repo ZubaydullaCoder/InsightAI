@@ -2,7 +2,7 @@
 
 ## Design System Components (AntD v6 — Used As-Is)
 
-| Component | AntD v5 | Usage in Mahalla Ovozi |
+| Component | AntD v6 | Usage in Mahalla Ovozi |
 |---|---|---|
 | `Drawer` | ✅ | Context evidence drawer overlay |
 | `Badge` | ✅ | Lane signal count on lane headers |

@@ -1313,3 +1313,55 @@ document will be written after Phase 1 pilot review, informed by real usage data
 6. Run `npx prisma migrate dev --name init`
 7. `.env.example` with all required variables documented
 8. Local PostgreSQL container or install (instructions in README)
+
+---
+
+### Seed Data Strategy
+
+All seed data lives in `prisma/seed.ts` and runs via `npm run db:seed`
+(registered as `"prisma": { "seed": "tsx prisma/seed.ts" }` in `package.json`).
+
+Seed data is **required** before any story can be validated end-to-end.
+It must be idempotent — re-running `db:seed` must not duplicate rows.
+
+#### Minimum Required Seed (Development)
+
+```typescript
+// prisma/seed.ts
+// Deterministic IDs ensure re-seeding is idempotent.
+
+// 1 — District
+const district = await prisma.district.upsert({
+  where:  { id: 'district-001' },
+  update: {},
+  create: { id: 'district-001', name: 'Yunusobod tumani' },
+})
+
+// 2 — Mahallas (fake chat IDs for local dev; real IDs set via Ops Console at pilot)
+for (const [id, name, chatId] of [
+  ['mahalla-001', 'Навбаҳор маҳалласи', -1001000000001n],
+  ['mahalla-002', 'Олмазор маҳалласи',  -1001000000002n],
+]) {
+  await prisma.mahalla.upsert({
+    where:  { id },
+    update: {},
+    create: { id, districtId: district.id, name, telegramChatId: chatId, botStatus: 'active' },
+  })
+}
+
+// 3 — Operator user (devpassword only; rotate before pilot via db:seed:pilot)
+const passwordHash = await argon2.hash('devpassword')
+await prisma.user.upsert({
+  where:  { username: 'operator' },
+  update: {},
+  create: { username: 'operator', passwordHash, districtId: district.id, role: 'operator' },
+})
+```
+
+#### Seed Rules
+
+- **Never** commit real pilot credentials in `seed.ts`; `devpassword` is local dev only.
+- Pilot accounts are created by a separate `prisma/seed-pilot.ts` script reading credentials from env vars.
+- Seed does **not** pre-populate `keywords` — managed via Ops Console during pilot.
+- Seed does **not** pre-populate `raw_messages` or `signal_messages` — use the Ops Console message simulator.
+- Fake `telegramChatId` values must be negative BigInts (Telegram supergroup IDs are always negative). Reserve `-1001000000001` through `-1001000000099` for dev use to avoid conflicts with real IDs.

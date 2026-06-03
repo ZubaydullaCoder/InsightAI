@@ -441,6 +441,10 @@ Semantic HTML structure; keyboard-navigable primary interactions. No formal WCAG
 
 - **NFR15:** The system supports pilot load of up to 5 monitored groups and 1,000 messages/day with no architectural changes required; growth beyond this is a post-pilot concern
 
+### Accessibility
+
+- **NFR16:** The dashboard UI meets WCAG 2.1 Level AA compliance for contrast ratios (minimum 4.5:1 for normal text, 3:1 for large text), keyboard navigation (all interactive elements reachable and operable via keyboard), focus visibility (2px colorPrimary outline), and semantic HTML/ARIA roles for screen readers. Target screen reader: NVDA on Windows + Chrome (most common in CIS government environments). Formal external accessibility audit is not required for the MVP pilot.
+
 ---
 
 ## Implementation Validation Notes Added After Technical Research Review
