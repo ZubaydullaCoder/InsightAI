@@ -455,7 +455,7 @@ So that the frontend can fetch and display current signals with all required fie
 **Given** an authenticated user with a valid session
 **When** `GET /api/signals` is called with no params
 **Then** the server returns all `signal_messages` for `req.session.districtId` where `telegram_timestamp` falls within today's UTC+5 calendar day (from 00:00:00 UTC+5 to now), sorted newest-first, as a direct unwrapped JSON array (not `{ data: [...] }`)
-**And** each signal object uses camelCase fields: `id`, `mahallId`, `mahallName`, `senderDisplayName`, `senderUsername`, `telegramTimestamp` (ISO 8601 UTC), `rawText`, `textSource`, `category`, `hokimRelated`, `shortLabel`, `telegramMessageUrl`, `createdAt`; absent optionals are `null` not `undefined`
+**And** each signal object uses camelCase fields matching the architecture `Signal` interface exactly: `id`, `telegramUpdateId`, `telegramMessageId`, `telegramMessageUrl`, `districtId`, `mahallaId`, `mahallaName`, `senderDisplayName`, `senderUsername`, `telegramTimestamp` (ISO 8601 UTC), `rawText`, `textSource`, `category`, `hokimRelated`, `keywordMatched`, `matchedKeyword`, `shortLabel`, `classifiedAt`; absent optionals are `null` not `undefined`
 **And** `telegramMessageUrl` is built in `signals/mapper.ts` using `t.me/c/<internalChatId>/<messageId>` (strip `-100` prefix from supergroup chat_id); returns `null` when IDs unavailable
 **And** `GET /api/signals?from=<ISO>&to=<ISO>` accepts explicit date range query params (snake_case) for Yesterday and 7-day preset fetches
 **And** unauthenticated request returns HTTP 401
@@ -636,19 +636,19 @@ So that the frontend can accurately display whether signal data is current or de
 
 ---
 
-### Story 5.2: Operator Health Endpoint - GET /api/ops/health
+### Story 5.2: Operator Pipeline & Health Monitoring
 
 As an **operator**,
-I want a detailed operator-facing health endpoint exposing full pipeline metrics,
-So that I can monitor bot connectivity, batch performance, queue state, and errors without the Ops Console UI.
+I want to monitor bot connectivity, batch performance, queue state, and errors without the Ops Console UI,
+So that I can diagnose pipeline state from the command line or any HTTP client during development.
 
 **Acceptance Criteria:**
 
 **Given** a request from localhost (or valid `OPS_SECRET` header), `OPS_ENABLED=true`, `NODE_ENV !== 'production'`
-**When** `GET /api/ops/health` is called
-**Then** response includes: `{ status, lastBatchAt, lastBatchStatus, messagesProcessed, signalsWritten, ignoredCount, queueDepth, filterMode, preFilterDiscardCount, keywordSkipCount, shadowCompareMetrics | null, mahallas: [{id, name, botStatus, botLastSeenAt}], recentErrors: [{message, occurredAt}] }`
-**And** `filterMode` is read from `FILTER_MODE` env var at request time; discard counts from `pipeline_events` since last batch start
-**And** returns HTTP 403 if `OPS_ENABLED !== 'true'` or `NODE_ENV === 'production'`; non-localhost requires matching `OPS_SECRET` header
+**When** `GET /api/ops/batch-status` is called
+**Then** response includes: `{ schedulerStatus, lastBatchAt, lastBatchDuration, lastBatchResult: { filterMode, messagesFetched, signalsWritten, ignoredCount, preFilterDiscards, keywordMatchedCount, keywordSkippedCount, ... , errors }, recentErrors: [{ message, occurredAt }] }` where `recentErrors` lists the last 10 pipeline errors newest-first
+**And** `GET /api/ops/system-health` returns: `{ database, scheduler, aiApi, bot, botConnectivity: [{ mahallaId, mahallaName, botStatus, botLastSeenAt }] }` — the combined pair covers all fields previously proposed for `/api/ops/health`
+**And** both return HTTP 404 if `OPS_ENABLED !== 'true'` or `NODE_ENV === 'production'`; non-localhost without correct `OPS_SECRET` returns 403
 **And** `npm run lint` and `npm run test` pass; tests: blocked in production, passes locally, passes with correct OPS_SECRET
 
 ---
@@ -685,7 +685,7 @@ So that the developer console is never accessible in production and has a stable
 **Given** `OPS_ENABLED=true`, `NODE_ENV=development`, request from localhost
 **When** the developer navigates to `/ops`
 **Then** `OpsPage` renders with title "Ops Console - Mahalla Ovozi" and navigation for: Simulator, Pipeline Log, Keyword Registry, Signals Browser, Health
-**And** when `OPS_ENABLED=false` OR `NODE_ENV=production`: all `/api/ops/*` return HTTP 403; frontend shows "Ops Console disabled"
+**And** when `OPS_ENABLED=false` OR `NODE_ENV=production`: all `/api/ops/*` return HTTP 404; frontend shows "Ops Console disabled"
 **And** non-localhost access requires matching `OPS_SECRET` header; missing/wrong returns HTTP 403
 **And** `OpsPage` uses independent TanStack Query instances - never shares state with `DashboardPage`
 **And** `npm run lint` and `npm run test` pass
@@ -719,8 +719,8 @@ So that I can trace each message through the pipeline and validate classifier be
 
 **Given** the Ops Console Pipeline Log panel is open
 **When** the panel loads
-**Then** `GET /api/ops/pipeline-events` returns the most recent 100 `pipeline_events` for the district, newest-first: `eventType`, `mahallaId`, `telegramUpdateId`, `filterOutcome` (structural_discard/keyword_skip/ai_queued/ai_signal/ai_ignore), `detail` (JSON), `occurredAt`
-**And** Run Batch Now calls `POST /api/ops/run-batch`; server calls `runClassifyBatchWithLock('manual')` and responds `{ status: 'started' | 'locked' }`
+**Then** `GET /api/ops/pipeline-events` returns the most recent 100 `pipeline_events` for the district, newest-first, with fields: `id`, `eventType`, `districtId`, `mahallaId`, `telegramUpdateId`, `rawMessageId`, `signalId`, `detail` (JSON), `createdAt` (ISO 8601 UTC); UI derives display outcome from `eventType` (e.g. `prefilter_discard` → structural discard, `keyword_skip` → keyword skip)
+**And** Run Batch Now calls `POST /api/ops/trigger-batch`; server calls `runClassifyBatchWithLock('manual')` and responds `{ status: 'started' | 'locked' }`
 **And** batch status panel shows: `lastBatchAt`, `status`, `messagesProcessed`, `signalsWritten`, `ignoredCount`, `queueDepth` - auto-refreshes every 5 seconds
 **And** `npm run lint` and `npm run test` pass
 
@@ -757,5 +757,5 @@ So that I can verify classifier output quality and pipeline state during HITL va
 **When** the panel loads
 **Then** `GET /api/ops/signals` returns 50 most recent `signal_messages` for the district: `category`, `hokimRelated`, `shortLabel`, `textSource`, `telegramTimestamp`
 **And** `GET /api/ops/raw-messages` returns all pending `raw_messages`: `id`, `text`, `mahallaId`, `telegramTimestamp`, `textSource`
-**And** Health Dashboard panel shows: active `FILTER_MODE` (read-only from env), `lastBatchAt`, `queueDepth`, `botStatus` per mahalla, `preFilterDiscardCount`, `keywordSkipCount`, `shadowCompareMetrics` if FILTER_MODE=shadow_compare - sourced from `GET /api/ops/health`; auto-refreshes every 10 seconds
+**And** Health Dashboard panel shows two sections: (1) **Infrastructure** — DB status, scheduler status, AI API status, bot connectivity per mahalla — sourced from `GET /api/ops/system-health`; (2) **Pipeline Metrics** — active `FILTER_MODE`, `lastBatchAt`, `queueDepth`, `preFilterDiscardCount`, `keywordSkipCount`, `shadowCompareMetrics` if FILTER_MODE=shadow_compare — sourced from `GET /api/ops/batch-status`; both auto-refresh every 10 seconds
 **And** `npm run lint` and `npm run test` pass

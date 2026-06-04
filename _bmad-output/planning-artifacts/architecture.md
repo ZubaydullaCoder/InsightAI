@@ -130,7 +130,7 @@ useful enough for pilot deployment. See Section 16 for the Phase 2 roadmap.
 - `@tanstack/react-query` v5.x — server state caching
 - `@tanstack/react-virtual` — lane virtualization (deferred until >50 cards)
 - `react-router-dom` v6.30.x (pinned — v7 is a major rewrite; v6 is stable and well-documented)
-- `vite` ^6.x — dev server + production build
+- `vite` ^8.x — dev server + production build (Node >=20.19 or >=22.12 required; `npm create vite@latest` installs Vite 8)
 - `typescript` — strict mode throughout
 
 **Tooling:**
@@ -277,8 +277,8 @@ All tables defined in `prisma/schema.prisma`. All timestamps stored as UTC.
 generator client {
   provider = "prisma-client"
   // Output path relative to prisma/schema.prisma at project root.
-  // Import in server code: import { PrismaClient } from '../generated/prisma'
-  // (path relative to apps/server/src/)
+  // Import in server code: import { PrismaClient } from '../generated/prisma/client.js'
+  // (path relative to apps/server/src/shared/ — Prisma 7 generates client.ts, not index.ts)
   output   = "../apps/server/src/generated/prisma"
 }
 
@@ -451,15 +451,19 @@ model BatchHealth {
 // Phase 1 only — stores per-message pipeline trace for Ops Console display.
 // This model is DROPPED in the Phase 2 migration and not used in production.
 model PipelineEvent {
-  id             Int      @id @default(autoincrement())
-  event_type     String   @db.VarChar(30)
+  id                  Int      @id @default(autoincrement())
+  event_type          String   @db.VarChar(30)
   // 'raw' | 'prefilter_pass' | 'prefilter_discard' | 'keyword_match' | 'keyword_skip' | 'ai_call' | 'ai_result' | 'stored' | 'error'
-  raw_message_id Int?
-  signal_id      Int?
-  detail         Json     @default("{}")
-  created_at     DateTime @default(now())
+  district_id         Int      // required: enables district-scoped GET /api/ops/pipeline-events
+  mahalla_id          Int?     // null for events not tied to a specific mahalla (e.g. batch-level errors)
+  telegram_update_id  Int?     // null if the event precedes intake (e.g. scheduler start); stored in detail.json also for keyword_skip events where raw_message_id is null
+  raw_message_id      Int?
+  signal_id           Int?
+  // @default({}) ensures the column is always valid JSON even if detail is omitted at insert.
+  detail              Json     @default("{}")
+  created_at          DateTime @default(now())
 
-  @@index([created_at])
+  @@index([district_id, created_at])
   @@map("pipeline_events")
 }
 ```
@@ -477,8 +481,10 @@ At runtime, the connection string is passed directly through `@prisma/adapter-pg
 import { defineConfig, env } from 'prisma/config'
 
 export default defineConfig({
-  earlyAccess: true,
   schema: './prisma/schema.prisma',
+  migrations: {
+    path: './prisma/migrations',
+  },
   datasource: {
     // url used by Prisma CLI for migrations and studio only.
     // At runtime the adapter in db.ts uses the same env var directly.
@@ -489,10 +495,11 @@ export default defineConfig({
 
 **`apps/server/src/shared/db.ts`** (Prisma client singleton — used at runtime):
 ```typescript
-import { PrismaClient } from '../generated/prisma'
+import { PrismaClient } from '../generated/prisma/client.js'
 import { PrismaPg } from '@prisma/adapter-pg'
 
 // Runtime connection: PrismaClient reads DATABASE_URL directly via the adapter.
+// @prisma/adapter-pg@7.8.0 accepts Pool | PoolConfig | string — { connectionString } is the simple idiomatic form.
 // This is independent of prisma.config.ts — the adapter is the runtime connection layer.
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
 

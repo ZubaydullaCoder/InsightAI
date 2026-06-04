@@ -276,12 +276,15 @@ GET /api/ops/pipeline-events?limit=100
 Response: PipelineEvent[]
 
 interface PipelineEvent {
-  id:         number
-  event_type: 'raw' | 'prefilter_pass' | 'prefilter_discard' | 'keyword_match' | 'keyword_skip' | 'ai_call' | 'ai_result' | 'stored' | 'error'
-  raw_message_id: number | null
-  signal_id:   number | null
-  detail:      Record<string, unknown>  // varies by event_type
-  created_at:  string  // ISO 8601 UTC
+  id:                number
+  eventType:         'raw' | 'prefilter_pass' | 'prefilter_discard' | 'keyword_match' | 'keyword_skip' | 'ai_call' | 'ai_result' | 'stored' | 'error'
+  districtId:        number
+  mahallaId:         number | null
+  telegramUpdateId:  number | null
+  rawMessageId:      number | null
+  signalId:          number | null
+  detail:            Record<string, unknown>  // varies by eventType
+  createdAt:         string  // ISO 8601 UTC
 }
 
 DELETE /api/ops/pipeline-events
@@ -298,17 +301,20 @@ Pipeline events are stored in a `pipeline_events` table (Phase 1 only — droppe
 
 ```prisma
 model PipelineEvent {
-  id             Int      @id @default(autoincrement())
+  id                  Int      @id @default(autoincrement())
   // VarChar(30): current max value 'prefilter_discard' = 17 chars; 30 gives safe headroom.
-  event_type     String   @db.VarChar(30)
+  event_type          String   @db.VarChar(30)
   // 'raw' | 'prefilter_pass' | 'prefilter_discard' | 'keyword_match' | 'keyword_skip' | 'ai_call' | 'ai_result' | 'stored' | 'error'
-  raw_message_id Int?
-  signal_id      Int?
+  district_id         Int      // required: enables district-scoped GET /api/ops/pipeline-events
+  mahalla_id          Int?     // null for non-message-level events (e.g. batch-level errors)
+  telegram_update_id  Int?     // null if event precedes intake; stored for keyword_skip where raw_message_id is null
+  raw_message_id      Int?
+  signal_id           Int?
   // @default({}) ensures the column is always valid JSON even if detail is omitted at insert.
-  detail         Json     @default("{}")
-  created_at     DateTime @default(now())
+  detail              Json     @default("{}")
+  created_at          DateTime @default(now())
 
-  @@index([created_at])
+  @@index([district_id, created_at])
   @@map("pipeline_events")
 }
 ```
@@ -420,19 +426,20 @@ Response: {
   lastBatchAt:      string | null
   lastBatchDuration: number | null  // milliseconds
   lastBatchResult: {
-    filterMode:         'ai_full' | 'keyword_gate' | 'shadow_compare'
-    messagesFetched:    number
-    signalsWritten:     number
-    ignoredCount:       number
-    preFilterDiscards:  number
+    filterMode:               'ai_full' | 'keyword_gate' | 'shadow_compare'
+    messagesFetched:          number
+    signalsWritten:           number
+    ignoredCount:             number
+    preFilterDiscards:        number
     keywordMatchedCount:      number
     keywordSkippedCount:      number
     keywordAiSignalCount:     number
     keywordAiIgnoreCount:     number
     noKeywordAiSignalCount:   number
     noKeywordAiIgnoreCount:   number
-    errors:             string | null
+    errors:                   string | null
   } | null
+  recentErrors: Array<{ message: string; occurredAt: string }>  // last N pipeline errors, newest-first
 }
 
 POST /api/ops/trigger-batch
