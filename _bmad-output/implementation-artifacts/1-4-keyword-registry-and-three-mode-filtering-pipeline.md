@@ -1,6 +1,6 @@
 # Story 1.4: Keyword Registry & Three-Mode Filtering Pipeline
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -77,6 +77,19 @@ So that the pipeline correctly routes messages based on the active `FILTER_MODE`
   - Added `orderBy: { id: 'asc' }` to `getActiveKeywords()`. Added 1 new test asserting orderBy shape. (61 tests total)
 - [x] [Review][Patch][RESOLVED] Matcher records whitespace-padded matched phrases instead of the normalized phrase [apps/server/src/keywords/matcher.ts:31]
   - Changed `return { matched: true, phrase: kw.phrase }` → `return { matched: true, phrase: trimmedPhrase }`. Updated 2 matcher tests to assert trimmed return value.
+
+### Review Findings (CR Pass 2 — 2026-06-10)
+
+- [x] [Review][Patch][RESOLVED] No error handling for `getActiveKeywords` DB failure — unhandled rejection crashes pipeline [apps/server/src/bot/filters/pipeline.ts:115-116]
+  - Wrapped in try/catch with fail-open: DB error logs an error and falls back to empty keyword list so messages continue to flow. Tests: `8001`, `8002` in CR Patch P1 describe block.
+- [x] [Review][Patch][RESOLVED] No error handling for `pipelineEvent.create` failure — observability side-effect crashes pipeline after raw_message written [apps/server/src/bot/filters/pipeline.ts:152-161,223-232]
+  - Extracted `createPipelineEvent()` helper that wraps `prisma.pipelineEvent.create` in try/catch + error log. Pipeline event failure never propagates. Tests: `9001`, `9002` in CR Patch P2 describe block.
+- [x] [Review][Patch][RESOLVED] Upsert block duplication (DRY) — `rawMessage.upsert` call duplicated verbatim across keyword_gate and else branches [apps/server/src/bot/filters/pipeline.ts:135-150,203-218]
+  - Extracted `upsertRawMessage()` local helper. Both branches now call the helper. All 65 existing tests continue passing.
+- [x] [Review][Defer] `textSnippet` truncation may split UTF-16 surrogate pair in emoji-heavy text [apps/server/src/bot/filters/pipeline.ts:126] — low risk for Uzbek/Cyrillic, pre-existing pattern
+- [x] [Review][Defer] No caching on `getActiveKeywords` — DB query per message at scale [apps/server/src/keywords/query.ts] — pilot volume is low, optimization deferred
+- [x] [Review][Defer] `rawMessage.upsert` non-duplicate constraint failure unhandled [apps/server/src/bot/filters/pipeline.ts:135-150] — pre-existing from Story 1.2
+- [x] [Review][Defer] `update.message!.date` = 0 from Telegram produces epoch timestamp [apps/server/src/bot/filters/pipeline.ts:148] — pre-existing edge case
 
 ## Dev Notes
 
@@ -388,3 +401,4 @@ Claude Sonnet 4.6 (Thinking)
 - 2026-06-09: Implemented Story 1.4 — keyword registry and three-mode filtering pipeline. Created keywords/ module (matcher + query), updated pipeline.ts with FILTER_MODE routing, extended pipeline.test.ts with 10 new tests. 60/60 tests pass, lint clean, tsc clean.
 - 2026-06-09: Applied code review patches (findings 2 & 3). `getActiveKeywords()` now orders by `id ASC` for deterministic first-match-wins. Matcher now returns `trimmedPhrase` instead of raw DB value so `pipeline_events.detail.matchedPhrase` is always clean. Finding 1 (pipeline_events idempotency) deferred with explicit Story 1.5 aggregation deduplication requirement documented. 61/61 tests pass.
 - 2026-06-10: Course correction approved — `keyword_gate` is now the preferred/default demo-pilot filtering mode based on real mahalla group analysis showing low signal density. `ai_full` remains available as fallback and `shadow_compare` remains available for validation.
+- 2026-06-10: CR Pass 2 patches applied. (P1) `getActiveKeywords` wrapped in try/catch with fail-open: DB error falls back to empty keyword list so messages still flow. (P2) `createPipelineEvent()` helper isolates `pipelineEvent.create` failures — observability writes never crash the pipeline. (P3) `upsertRawMessage()` helper extracted to eliminate 12-field verbatim duplication. 4 new tests added. 65/65 tests pass, lint clean, tsc clean.

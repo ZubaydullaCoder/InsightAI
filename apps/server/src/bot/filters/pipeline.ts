@@ -112,7 +112,15 @@ export async function pipeline(update: Update): Promise<void> {
   // ── Stage 2: Keyword-gate (AR4) ──
   // Load active keywords for this district, run matcher against message text.
   // districtId is ALWAYS from mahalla.district_id — never from request body (AC #5).
-  const activeKeywords = await getActiveKeywords(mahalla.district_id)
+  let activeKeywords: Awaited<ReturnType<typeof getActiveKeywords>> = []
+  try {
+    activeKeywords = await getActiveKeywords(mahalla.district_id)
+  } catch (err) {
+    logger.error(
+      { updateId, mahallaId: mahalla.id, districtId: mahalla.district_id, err },
+      'getActiveKeywords failed — treating as empty list (fail-open)',
+    )
+  }
   const matchResult = matchesAnyKeyword(rawText, activeKeywords)
 
   const filterMode = env.FILTER_MODE
@@ -129,35 +137,45 @@ export async function pipeline(update: Update): Promise<void> {
     matchedPhrase:     matchResult.phrase,
   }
 
+  // P3 patch: shared upsert helper — eliminates verbatim duplication across branches.
+  const upsertRawMessage = () => prisma.rawMessage.upsert({
+    where:  { telegram_update_id: update.update_id },
+    update: {},
+    create: {
+      telegram_update_id:  update.update_id,
+      telegram_message_id: update.message!.message_id,
+      chat_id:             chatId,
+      district_id:         mahalla.district_id,
+      mahalla_id:          mahalla.id,
+      sender_display_name: senderDisplayName,
+      sender_username:     from.username ?? null,
+      text:                rawText,
+      text_source,
+      telegram_timestamp:  new Date(update.message!.date * 1000),
+    },
+  })
+
+  // P2 patch: pipelineEvent.create failure isolation.
+  const createPipelineEvent = async (data: Parameters<typeof prisma.pipelineEvent.create>[0]['data']) => {
+    try {
+      await prisma.pipelineEvent.create({ data })
+    } catch (err) {
+      logger.error({ updateId, eventType: data.event_type, err }, 'pipelineEvent.create failed — message already written')
+    }
+  }
+
   if (filterMode === 'keyword_gate') {
     if (matchResult.matched) {
       // keyword_gate + keyword match → write to raw_messages, record keyword_match event
-      const rawMessage = await prisma.rawMessage.upsert({
-        where:  { telegram_update_id: update.update_id },
-        update: {},
-        create: {
-          telegram_update_id:  update.update_id,
-          telegram_message_id: update.message!.message_id,
-          chat_id:             chatId,
-          district_id:         mahalla.district_id,
-          mahalla_id:          mahalla.id,
-          sender_display_name: senderDisplayName,
-          sender_username:     from.username ?? null,
-          text:                rawText,
-          text_source,
-          telegram_timestamp:  new Date(update.message!.date * 1000),
-        },
-      })
+      const rawMessage = await upsertRawMessage()
 
-      await prisma.pipelineEvent.create({
-        data: {
-          event_type:         'keyword_match',
-          district_id:        mahalla.district_id,
-          mahalla_id:         mahalla.id,
-          telegram_update_id: update.update_id,
-          raw_message_id:     rawMessage.id,
-          detail:             baseDetail,
-        },
+      await createPipelineEvent({
+        event_type:         'keyword_match',
+        district_id:        mahalla.district_id,
+        mahalla_id:         mahalla.id,
+        telegram_update_id: update.update_id,
+        raw_message_id:     rawMessage.id,
+        detail:             baseDetail,
       })
 
       logger.info(
@@ -173,17 +191,15 @@ export async function pipeline(update: Update): Promise<void> {
       )
     } else {
       // keyword_gate + no match → skip upsert, record keyword_skip event, return
-      await prisma.pipelineEvent.create({
-        data: {
-          event_type:         'keyword_skip',
-          district_id:        mahalla.district_id,
-          mahalla_id:         mahalla.id,
-          telegram_update_id: update.update_id,
-          raw_message_id:     null,
-          detail: {
-            ...baseDetail,
-            reason: 'No keyword match in keyword_gate mode',
-          },
+      await createPipelineEvent({
+        event_type:         'keyword_skip',
+        district_id:        mahalla.district_id,
+        mahalla_id:         mahalla.id,
+        telegram_update_id: update.update_id,
+        raw_message_id:     null,
+        detail: {
+          ...baseDetail,
+          reason: 'No keyword match in keyword_gate mode',
         },
       })
 
@@ -200,35 +216,18 @@ export async function pipeline(update: Update): Promise<void> {
     }
   } else {
     // ai_full or shadow_compare → always write to raw_messages
-    const rawMessage = await prisma.rawMessage.upsert({
-      where:  { telegram_update_id: update.update_id },
-      update: {},
-      create: {
-        telegram_update_id:  update.update_id,
-        telegram_message_id: update.message!.message_id,
-        chat_id:             chatId,
-        district_id:         mahalla.district_id,
-        mahalla_id:          mahalla.id,
-        sender_display_name: senderDisplayName,
-        sender_username:     from.username ?? null,
-        text:                rawText,
-        text_source,
-        telegram_timestamp:  new Date(update.message!.date * 1000),
-      },
-    })
+    const rawMessage = await upsertRawMessage()
 
     // Determine event type by keyword match status
     const eventType = matchResult.matched ? 'keyword_match' : 'prefilter_pass'
 
-    await prisma.pipelineEvent.create({
-      data: {
-        event_type:         eventType,
-        district_id:        mahalla.district_id,
-        mahalla_id:         mahalla.id,
-        telegram_update_id: update.update_id,
-        raw_message_id:     rawMessage.id,
-        detail:             baseDetail,
-      },
+    await createPipelineEvent({
+      event_type:         eventType,
+      district_id:        mahalla.district_id,
+      mahalla_id:         mahalla.id,
+      telegram_update_id: update.update_id,
+      raw_message_id:     rawMessage.id,
+      detail:             baseDetail,
     })
 
     logger.info(

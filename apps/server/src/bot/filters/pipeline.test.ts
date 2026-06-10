@@ -627,3 +627,69 @@ describe('pipeline — districtId sourced from mahalla, never request body (AC #
     )
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CR Patch tests — error handling and DRY (CR Pass 2, 2026-06-10)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('pipeline — getActiveKeywords DB error: fail-open (CR Patch P1)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockEnv.FILTER_MODE = 'keyword_gate'
+    mockFindUnique.mockResolvedValue(MAHALLA)
+    mockUpsert.mockResolvedValue({ id: 100 })
+    mockPipelineCreate.mockResolvedValue({})
+  })
+
+  it('does not throw when getActiveKeywords rejects — treats as empty keyword list', async () => {
+    mockFindMany.mockRejectedValue(new Error('DB connection error'))
+    const update = makeUpdate({ text: 'suv bor' }, 8001)
+
+    // Must not throw — pipeline continues with empty keyword list
+    await expect(pipeline(update)).resolves.not.toThrow()
+  })
+
+  it('treats empty keyword list on DB error as no-match in keyword_gate — writes keyword_skip event', async () => {
+    mockFindMany.mockRejectedValue(new Error('DB connection error'))
+    const update = makeUpdate({ text: 'suv bor' }, 8002)
+
+    await pipeline(update)
+
+    // With empty keyword list: no match → keyword_gate skips upsert
+    expect(mockUpsert).not.toHaveBeenCalled()
+    expect(mockPipelineCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ event_type: 'keyword_skip' }),
+      }),
+    )
+  })
+})
+
+describe('pipeline — pipelineEvent.create DB error: does not crash pipeline (CR Patch P2)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockEnv.FILTER_MODE = 'ai_full'
+    mockFindUnique.mockResolvedValue(MAHALLA)
+    mockUpsert.mockResolvedValue({ id: 100 })
+    mockFindMany.mockResolvedValue([])
+  })
+
+  it('does not throw when pipelineEvent.create rejects — raw_message already written', async () => {
+    mockPipelineCreate.mockRejectedValue(new Error('pipelineEvent insert failed'))
+    const update = makeUpdate({ text: 'some text' }, 9001)
+
+    // Must not throw even though pipelineEvent.create failed
+    await expect(pipeline(update)).resolves.not.toThrow()
+  })
+
+  it('raw_message upsert still called when pipelineEvent.create rejects', async () => {
+    mockPipelineCreate.mockRejectedValue(new Error('pipelineEvent insert failed'))
+    const update = makeUpdate({ text: 'some text' }, 9002)
+
+    await pipeline(update)
+
+    // Message was written — only the observability event failed
+    expect(mockUpsert).toHaveBeenCalledOnce()
+  })
+})
+
