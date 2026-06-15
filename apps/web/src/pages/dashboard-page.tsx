@@ -4,6 +4,8 @@ import { AppShell } from '../components/app-shell.tsx'
 import { UnsupportedScreen } from '../components/unsupported-screen.tsx'
 import { LaneGrid, type SignalsByCategory } from '../components/lane-grid/lane-grid.tsx'
 import { useSignals, type Signal } from '../api/signals.ts'
+import { useHealth } from '../api/health.ts'
+import { DelayBanner } from '../components/delay-banner.tsx'
 import { strings } from '../strings.ts'
 
 // Lane label order for loading skeleton — matches LANE_ORDER in LaneGrid
@@ -41,6 +43,8 @@ function groupSignals(signals: Signal[]): SignalsByCategory {
 
 export function DashboardPage() {
   const { data: signals, isLoading, isError } = useSignals()
+  const { data: healthData } = useHealth()
+  const isDelayed = healthData?.status === 'delayed'
   const groupedSignals = groupSignals(signals ?? [])
 
   // Context drawer wiring is Story 4-3 — stub with console.log for now
@@ -72,17 +76,24 @@ export function DashboardPage() {
             <Alert
               type="warning"
               showIcon
-              message={strings.dashboard.loadErrorTitle}
+              title={strings.dashboard.loadErrorTitle}
               description={strings.dashboard.loadErrorDescription}
             />
           </div>
         ) : (
-          /* Data state: 5-lane grid */
-          <LaneGrid
-            signals={groupedSignals}
-            activeSignalId={null}
-            onCardClick={handleCardClick}
-          />
+          /* Data state: optional delay banner above lane grid */
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+            {isDelayed && (
+              <DelayBanner lastBatchAt={healthData?.lastBatchAt ?? null} />
+            )}
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <LaneGrid
+                signals={groupedSignals}
+                activeSignalId={null}
+                onCardClick={handleCardClick}
+              />
+            </div>
+          </div>
         )}
       </AppShell>
       <UnsupportedScreen />

@@ -22,7 +22,7 @@ export function LaneGrid({ signals, onCardClick }: LaneGridProps) {
       className="lane-grid"
       style={{
         display: 'flex',
-        height: 'calc(100vh - 56px)',
+        height: '100%',
         overflow: 'hidden',
       }}
     >

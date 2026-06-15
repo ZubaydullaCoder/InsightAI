@@ -75,7 +75,7 @@ development_status:
   3-1-antd-theme-system-and-app-shell: done
   3-2-signals-api-get-api-signals-endpoint: done
   3-3-five-lane-dashboard-with-signal-cards: done
-  3-4-60-second-auto-refresh-and-delay-banner: ready-for-dev
+  3-4-60-second-auto-refresh-and-delay-banner: done
   epic-3-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────

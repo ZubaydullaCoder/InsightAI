@@ -39,5 +39,8 @@ export const strings = {
     loadErrorDescription: 'Саҳифани янгилаб кўринг ёки кейинроқ қайта урининг.',
     senderFallback:       'Резидент',
     captionBadgeLabel:    'Расм тавсифи',
+    delayBannerPrefix:    'Сигналлар янгиланмаяпти — охирги янгиланиш',
+    delayBannerNoData:    'Сигналлар янгиланмаяпти — маълумот йўқ',
   },
+
 } as const

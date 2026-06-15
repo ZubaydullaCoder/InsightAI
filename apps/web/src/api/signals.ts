@@ -50,5 +50,7 @@ export function useSignals(params?: SignalsQueryParams) {
   return useQuery({
     queryKey: ['signals', params ?? {}],
     queryFn: () => fetchSignals(params),
+    refetchInterval: 60000,
   })
 }
+
