@@ -60,7 +60,7 @@ development_status:
   # EPIC 2: Authentication & Session Security
   # Goal: Login, protected routes, logout, district-scoped data access.
   # ─────────────────────────────────────────────────────────────────────────
-  epic-2: in-progress
+  epic-2: done
   2-1-login-and-session-issuance: done
   2-2-protected-routes-and-district-scope-enforcement: done
   2-3-logout-and-session-invalidation: done
@@ -71,7 +71,7 @@ development_status:
   # EPIC 3: Signal Dashboard — Core Viewing
   # Goal: Five-lane dashboard with signal cards, count badges, delay banner.
   # ─────────────────────────────────────────────────────────────────────────
-  epic-3: in-progress
+  epic-3: done
   3-1-antd-theme-system-and-app-shell: done
   3-2-signals-api-get-api-signals-endpoint: done
   3-3-five-lane-dashboard-with-signal-cards: done
