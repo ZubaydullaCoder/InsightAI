@@ -10,5 +10,4 @@ apps/server/src/generated/
 .next/
 build/
 *.log
-AGENTS.md
 .grepai/
