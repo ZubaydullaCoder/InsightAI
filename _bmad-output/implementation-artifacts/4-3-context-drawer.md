@@ -1,6 +1,6 @@
 # Story 4.3: Context Drawer API — Signal Context Endpoint
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -39,46 +39,46 @@ so that the frontend can display evidence context for any clicked signal.
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add `querySignalById` and `queryContextSignals` to `apps/server/src/signals/query.ts` (AC: 1, 2, 4, 5, 6)
-  - [ ] Add `querySignalById(id: number, districtId: number): Promise<SignalMessageWithMahalla | null>`
+- [x] Task 1: Add `querySignalById` and `queryContextSignals` to `apps/server/src/signals/query.ts` (AC: 1, 2, 4, 5, 6)
+  - [x] Add `querySignalById(id: number, districtId: number): Promise<SignalMessageWithMahalla | null>`
     - Uses `prisma.signalMessage.findFirst` with `where: { id, district_id: districtId }`
     - Includes same `mahalla` join as `querySignals`
-  - [ ] Add `queryContextSignals(districtId: number, mahallaId: number, category: string, from: Date, to: Date): Promise<SignalMessageWithMahalla[]>`
+  - [x] Add `queryContextSignals(districtId: number, mahallaId: number, category: string, from: Date, to: Date): Promise<SignalMessageWithMahalla[]>`
     - `where: { district_id: districtId, mahalla_id: mahallaId, category, telegram_timestamp: { gte: from, lte: to } }`
     - `orderBy: [{ telegram_timestamp: 'asc' }, { id: 'asc' }]` ← ascending for drawer temporal order
     - Includes same `mahalla` join as `querySignals`
 
-- [ ] Task 2: Add `GET /api/signals/:id/context` route to `apps/server/src/signals/index.ts` (AC: 1–6)
-  - [ ] Add route `signalsRouter.get('/signals/:id/context', async (req, res) => { ... })`
-  - [ ] Parse and validate `:id` — use strict positive-integer validation: full string must be digits only (`/^\d+$/` guard) AND the parsed value must be a safe positive integer; return 404 for any non-conforming value including `'abc'`, `'42abc'`, `'1.5'`, `'-1'`, `'0'`
-  - [ ] Validate `from`/`to` params using the existing `parseDateQueryParam` helper (already in the file); if only one is provided return 400; if both invalid return 400
-  - [ ] If neither `from` nor `to` is provided, fall back to `getTodayUTC5Range()`
-  - [ ] Call `querySignalById(id, districtId)` — if result is `null`, return 404 `{ statusCode: 404, error: 'Not Found', message: 'Signal not found' }`
-  - [ ] Extract `anchor.mahalla_id` and `anchor.category`
-  - [ ] Call `queryContextSignals(districtId, mahallaId, category, from, to)`
-  - [ ] Map rows with `mapSignalRow` and return as unwrapped array `res.json(signals)`
-  - [ ] Wrap in try/catch: on error log `{ err, districtId, signalId: id }` and return 500
+- [x] Task 2: Add `GET /api/signals/:id/context` route to `apps/server/src/signals/index.ts` (AC: 1–6)
+  - [x] Add route `signalsRouter.get('/signals/:id/context', async (req, res) => { ... })`
+  - [x] Parse and validate `:id` — use strict positive-integer validation: full string must be digits only (`/^\d+$/` guard) AND the parsed value must be a safe positive integer; return 404 for any non-conforming value including `'abc'`, `'42abc'`, `'1.5'`, `'-1'`, `'0'`
+  - [x] Validate `from`/`to` params using the existing `parseDateQueryParam` helper (already in the file); if only one is provided return 400; if both invalid return 400
+  - [x] If neither `from` nor `to` is provided, fall back to `getTodayUTC5Range()`
+  - [x] Call `querySignalById(id, districtId)` — if result is `null`, return 404 `{ statusCode: 404, error: 'Not Found', message: 'Signal not found' }`
+  - [x] Extract `anchor.mahalla_id` and `anchor.category`
+  - [x] Call `queryContextSignals(districtId, mahallaId, category, from, to)`
+  - [x] Map rows with `mapSignalRow` and return as unwrapped array `res.json(signals)`
+  - [x] Wrap in try/catch: on error log `{ err, districtId, signalId: id }` and return 500
 
-- [ ] Task 3: Add `fetchSignalContext` and `useSignalContext` to `apps/web/src/api/signals.ts` (AC: 3)
-  - [ ] Add interface `SignalContextQueryParams { from?: string; to?: string }`
-  - [ ] Add `async function fetchSignalContext(signalId: number, params?: SignalContextQueryParams): Promise<Signal[]>`
+- [x] Task 3: Add `fetchSignalContext` and `useSignalContext` to `apps/web/src/api/signals.ts` (AC: 3)
+  - [x] Add interface `SignalContextQueryParams { from?: string; to?: string }`
+  - [x] Add `async function fetchSignalContext(signalId: number, params?: SignalContextQueryParams): Promise<Signal[]>`
     - URL: `/api/signals/${signalId}/context`
     - Append `from`/`to` query params when present
     - `credentials: 'same-origin'`
     - Throws on non-ok response
-  - [ ] Add `export function useSignalContext(signalId: number | null, params?: SignalContextQueryParams)`
+  - [x] Add `export function useSignalContext(signalId: number | null, params?: SignalContextQueryParams)`
     - Uses TanStack Query with `queryKey: ['signal-context', signalId, params ?? {}]`
     - `enabled: signalId !== null` — do NOT fetch when no signal is selected
     - No `refetchInterval` — drawer context is fetched on demand only
     - Returns the query result
 
-- [ ] Task 4: Add focused unit tests (AC: 7)
-  - [ ] `apps/server/src/signals/query.test.ts` — add tests for `querySignalById` and `queryContextSignals`:
+- [x] Task 4: Add focused unit tests (AC: 7)
+  - [x] `apps/server/src/signals/query.test.ts` — add tests for `querySignalById` and `queryContextSignals`:
     - `querySignalById` calls `prisma.signalMessage.findFirst` with correct `{ id, district_id }` where clause
     - `querySignalById` returns `null` when not found
     - `queryContextSignals` calls `findMany` with `mahalla_id`, `category`, `district_id`, date range, ascending order
     - `queryContextSignals` returns results unchanged
-  - [ ] `apps/server/src/signals/index.test.ts` — add `describe('GET /api/signals/:id/context', ...)` block:
+  - [x] `apps/server/src/signals/index.test.ts` — add `describe('GET /api/signals/:id/context', ...)` block:
     - Returns 401 for unauthenticated request
     - Returns 404 when signal not found (no row in DB for that `id` + `districtId`)
     - Returns 404 when signal exists but belongs to a different district
@@ -91,11 +91,11 @@ so that the frontend can display evidence context for any clicked signal.
     - Returns 400 when `from` is after `to` (same guard as `GET /api/signals` — the route validates `parsedFrom.getTime() > parsedTo.getTime()`)
     - Returns 500 and logs when `queryContextSignals` throws
 
-- [ ] Task 5: Verify all checks pass (AC: 7)
-  - [ ] `pnpm lint`
-  - [ ] `pnpm test` (271 baseline + new tests)
-  - [ ] `pnpm exec tsc -b apps/server/tsconfig.json`
-  - [ ] `pnpm exec tsc -b apps/web/tsconfig.json` — validates the new `useSignalContext` hook compiles correctly
+- [x] Task 5: Verify all checks pass (AC: 7)
+  - [x] `pnpm lint`
+  - [x] `pnpm test` (271 baseline + new tests → 295 total, 0 failures)
+  - [x] `pnpm exec tsc -b apps/server/tsconfig.json`
+  - [x] `pnpm exec tsc -b apps/web/tsconfig.json` — validates the new `useSignalContext` hook compiles correctly
 
 ---
 
@@ -588,6 +588,24 @@ Claude Sonnet 4.6 (Thinking)
 
 ### Debug Log References
 
+N/A — clean implementation, no debugging required.
+
 ### Completion Notes List
 
+- ✅ Task 1: Added `querySignalById` (findFirst with `{ id, district_id }`) and `queryContextSignals` (findMany with ascending orderBy) to `query.ts`. Both reuse the file-local `SIGNAL_MAHALLA_INCLUDE` const.
+- ✅ Task 2: Added `GET /signals/:id/context` route to `index.ts`. Imports extended. Strict `/^\d+$/` guard prevents parseInt('42abc')=42 trap. District-scoped 404 (no 403) for cross-district or missing signals. `parseDateQueryParam` reused. `getTodayUTC5Range` reused as fallback. Unwrapped `Signal[]` response.
+- ✅ Task 3: Added `SignalContextQueryParams`, `fetchSignalContext`, and `useSignalContext` to `apps/web/src/api/signals.ts`. `enabled: signalId !== null`, no `refetchInterval`.
+- ✅ Task 4: 24 new tests added — 8 in `query.test.ts` (4 for `querySignalById`, 4 for `queryContextSignals`) and 16 in `index.test.ts` for the new route.
+- ✅ Task 5: All checks pass — `pnpm lint` clean, `pnpm test` 295/295 (was 271 baseline), `tsc -b` clean for both server and web.
+
 ### File List
+
+- `apps/server/src/signals/query.ts` — MODIFIED: added `querySignalById`, `queryContextSignals`
+- `apps/server/src/signals/index.ts` — MODIFIED: extended import, added `GET /signals/:id/context` route
+- `apps/web/src/api/signals.ts` — MODIFIED: added `SignalContextQueryParams`, `fetchSignalContext`, `useSignalContext`
+- `apps/server/src/signals/query.test.ts` — MODIFIED: added `mockFindFirst`, tests for `querySignalById` and `queryContextSignals`
+- `apps/server/src/signals/index.test.ts` — MODIFIED: extended mock factory, added `describe('GET /api/signals/:id/context', ...)` block (16 tests)
+
+### Change Log
+
+- 2026-06-19: Implemented Story 4.3 — Context Drawer API endpoint. Added `GET /api/signals/:id/context` server route with district-scoped two-step lookup, `useSignalContext` frontend hook, and 24 new unit tests. Total test count: 271 → 295.

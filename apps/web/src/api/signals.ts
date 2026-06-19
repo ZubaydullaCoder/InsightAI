@@ -54,3 +54,38 @@ export function useSignals(params?: SignalsQueryParams) {
   })
 }
 
+interface SignalContextQueryParams {
+  from?: string   // ISO 8601 with timezone
+  to?: string     // ISO 8601 with timezone
+}
+
+async function fetchSignalContext(
+  signalId: number,
+  params?: SignalContextQueryParams,
+): Promise<Signal[]> {
+  const url = new URL(`/api/signals/${signalId}/context`, window.location.origin)
+  if (params?.from) url.searchParams.set('from', params.from)
+  if (params?.to)   url.searchParams.set('to', params.to)
+
+  const res = await fetch(url.toString(), {
+    credentials: 'same-origin',
+  })
+
+  if (!res.ok) {
+    throw new Error(`GET /api/signals/${signalId}/context failed: ${res.status}`)
+  }
+
+  return res.json() as Promise<Signal[]>
+}
+
+export function useSignalContext(
+  signalId: number | null,
+  params?: SignalContextQueryParams,
+) {
+  return useQuery({
+    queryKey: ['signal-context', signalId, params ?? {}],
+    queryFn:  () => fetchSignalContext(signalId!, params),
+    enabled:  signalId !== null,
+    // No refetchInterval — drawer context is fetched on demand only
+  })
+}
