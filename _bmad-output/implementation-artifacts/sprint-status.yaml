@@ -94,7 +94,7 @@ development_status:
   # ─────────────────────────────────────────────────────────────────────────
   epic-5: in-progress
   5-1-health-api-endpoint-and-batch-reliability: done
-  5-2-bot-connectivity-health-and-dashboard-banner-wiring: backlog
+  5-2-bot-connectivity-health-and-dashboard-banner-wiring: ready-for-dev
   epic-5-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────
