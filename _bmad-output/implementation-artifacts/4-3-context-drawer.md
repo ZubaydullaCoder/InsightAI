@@ -88,12 +88,14 @@ so that the frontend can display evidence context for any clicked signal.
     - Explicit `from`/`to` params are parsed and passed to `queryContextSignals`
     - No `from`/`to` → `getTodayUTC5Range` is called and its result is used
     - Returns 400 for invalid date format (e.g., `?from=not-a-date&to=...`)
+    - Returns 400 when `from` is after `to` (same guard as `GET /api/signals` — the route validates `parsedFrom.getTime() > parsedTo.getTime()`)
     - Returns 500 and logs when `queryContextSignals` throws
 
 - [ ] Task 5: Verify all checks pass (AC: 7)
   - [ ] `pnpm lint`
   - [ ] `pnpm test` (271 baseline + new tests)
   - [ ] `pnpm exec tsc -b apps/server/tsconfig.json`
+  - [ ] `pnpm exec tsc -b apps/web/tsconfig.json` — validates the new `useSignalContext` hook compiles correctly
 
 ---
 
@@ -439,6 +441,12 @@ describe('GET /api/signals/:id/context', () => {
 
   it('returns 400 for invalid date format', async () => {
     // GET /api/signals/42/context?from=not-a-date&to=2026-06-19T00:00:00Z → 400
+  })
+
+  it('returns 400 when from is after to', async () => {
+    mockQuerySignalById.mockResolvedValue(ANCHOR_SIGNAL)
+    // GET /api/signals/42/context?from=2026-06-19T18:59:59Z&to=2026-06-19T00:00:00Z → 400
+    // The route validates parsedFrom.getTime() > parsedTo.getTime() before querying
   })
 
   it('returns 500 and logs when queryContextSignals throws', async () => {
