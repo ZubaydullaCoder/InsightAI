@@ -102,7 +102,7 @@ development_status:
   # Goal: /ops console for HITL pipeline validation before pilot launch.
   # ─────────────────────────────────────────────────────────────────────────
   epic-6: in-progress
-  6-1-ops-console-page-shell-and-guard: review
+  6-1-ops-console-page-shell-and-guard: done
   6-2-message-simulator: backlog
   6-3-pipeline-event-log-and-batch-controls: backlog
   6-4-keyword-registry-crud: backlog
