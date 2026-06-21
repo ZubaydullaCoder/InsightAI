@@ -1,9 +1,11 @@
 // apps/server/src/ops/index.ts
 import { Router, type IRouter } from 'express'
+import { z } from 'zod'
 import { env } from '../shared/env.js'
 import { prisma } from '../shared/db.js'
 import { logger } from '../shared/logger.js'
 import { isBatchRunning } from '../classifier/index.js'
+import { simulateWebhook, injectSimulatedMessage } from './simulator.js'
 
 export const opsRouter: IRouter = Router()
 
@@ -186,5 +188,78 @@ opsRouter.get('/system-health', async (_req, res) => {
       error:      'Internal Server Error',
       message:    'System health query failed',
     })
+  }
+})
+
+// ─── GET /api/ops/mahallas ────────────────────────────────────────────────────
+opsRouter.get('/mahallas', async (_req, res) => {
+  try {
+    const district = await prisma.district.findFirst({ where: { is_active: true } })
+    if (!district) return res.status(503).json({ error: 'No active district' })
+
+    const mahallas = await prisma.mahalla.findMany({
+      where:   { district_id: district.id },
+      select:  { id: true, name: true },
+      orderBy: { name: 'asc' },
+    })
+    return res.json(mahallas)
+  } catch (err) {
+    logger.error({ err }, 'Ops mahallas query failed')
+    return res.status(500).json({ statusCode: 500, error: 'Internal Server Error', message: 'Mahallas query failed' })
+  }
+})
+
+// ─── POST /api/ops/simulate-webhook ──────────────────────────────────────────
+const SimulateWebhookBodySchema = z.object({
+  mahallaId:          z.number().int().positive(),
+  senderDisplayName:  z.string().optional(),
+  text:               z.string().min(1),
+  textSource:         z.enum(['text', 'caption']).optional(),
+  simulatedTimestamp: z.string().datetime().optional(),
+})
+
+opsRouter.post('/simulate-webhook', async (req, res) => {
+  const parsed = SimulateWebhookBodySchema.safeParse(req.body)
+  if (!parsed.success) return res.status(400).json({ error: 'Bad Request', details: parsed.error.issues })
+  try {
+    const result = await simulateWebhook(parsed.data)
+    return res.json(result)
+  } catch (err) {
+    if (err instanceof Error && err.message === 'No active district') {
+      return res.status(503).json({ error: 'No active district' })
+    }
+    if (err instanceof Error && err.message === 'Mahalla not found in active district') {
+      return res.status(404).json({ error: 'Mahalla not found' })
+    }
+    logger.error({ err }, 'Ops simulate-webhook failed')
+    return res.status(500).json({ statusCode: 500, error: 'Internal Server Error', message: 'Simulate webhook failed' })
+  }
+})
+
+// ─── POST /api/ops/simulate-message ──────────────────────────────────────────
+const SimulateMessageBodySchema = z.object({
+  mahallaId:          z.number().int().positive(),
+  senderDisplayName:  z.string().optional(),
+  senderUsername:     z.string().optional(),
+  text:               z.string().min(1),
+  textSource:         z.enum(['text', 'caption']).optional(),
+  simulatedTimestamp: z.string().datetime().optional(),
+})
+
+opsRouter.post('/simulate-message', async (req, res) => {
+  const parsed = SimulateMessageBodySchema.safeParse(req.body)
+  if (!parsed.success) return res.status(400).json({ error: 'Bad Request', details: parsed.error.issues })
+  try {
+    const rawMessageId = await injectSimulatedMessage(parsed.data)
+    return res.json({ rawMessageId })
+  } catch (err) {
+    if (err instanceof Error && err.message === 'No active district') {
+      return res.status(503).json({ error: 'No active district' })
+    }
+    if (err instanceof Error && err.message === 'Mahalla not found in active district') {
+      return res.status(404).json({ error: 'Mahalla not found' })
+    }
+    logger.error({ err }, 'Ops simulate-message failed')
+    return res.status(500).json({ statusCode: 500, error: 'Internal Server Error', message: 'Simulate message failed' })
   }
 })

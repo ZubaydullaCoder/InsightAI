@@ -1,6 +1,6 @@
 # Story 6.2: Message Simulator
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -646,6 +646,8 @@ Gemini 3.5 Flash (High) / Claude Sonnet 4.6 (Thinking)
 
 ### Completion Notes List
 
+- 2026-06-21: Story 6.2 implementation reviewed and follow-up fixes applied: lint-safe fake grammY update construction, controlled stale mahalla handling, ISO timestamp submission, visible bulk completion count, and stronger simulator panel tests for success/error/retention behavior.
+
 ### File List
 
 | Status | File |
@@ -660,3 +662,4 @@ Gemini 3.5 Flash (High) / Claude Sonnet 4.6 (Thinking)
 ### Change Log
 
 - 2026-06-21: Story 6.2 specification created.
+- 2026-06-21: Story 6.2 implementation review fixes completed and verified.

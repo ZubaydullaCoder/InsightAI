@@ -46,6 +46,14 @@ vi.mock('../shared/db.js', () => ({
   },
 }))
 
+// Simulator mock — isolates route tests from the real pipeline
+const mockSimulateWebhook        = vi.hoisted(() => vi.fn())
+const mockInjectSimulatedMessage = vi.hoisted(() => vi.fn())
+vi.mock('./simulator.js', () => ({
+  simulateWebhook:         mockSimulateWebhook,
+  injectSimulatedMessage:  mockInjectSimulatedMessage,
+}))
+
 // Logger mock
 vi.mock('../shared/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -118,6 +126,11 @@ function resetMocks() {
   mockRawMessageCount.mockResolvedValue(0)
   mockMahallaFindMany.mockResolvedValue([])
   mockQueryRaw.mockResolvedValue([])
+  // Simulator defaults
+  mockSimulateWebhook.mockResolvedValue({
+    decision: 'queued', filterMode: 'keyword_gate', keywordMatched: true, matchedPhrase: 'suv'
+  })
+  mockInjectSimulatedMessage.mockResolvedValue(42)
 }
 
 // ─── Guard tests ──────────────────────────────────────────────────────────────
@@ -405,6 +418,221 @@ describe('GET /api/ops/system-health', () => {
       statusCode: 500,
       error:      'Internal Server Error',
       message:    'System health query failed',
+    })
+  })
+})
+
+// ─── GET /api/ops/mahallas ────────────────────────────────────────────────────
+
+describe('GET /api/ops/mahallas', () => {
+  let app: ReturnType<typeof createTestApp>
+
+  beforeEach(() => {
+    resetMocks()
+    app = createTestApp()
+  })
+
+  it('returns 404 when OPS_ENABLED is not "true"', async () => {
+    mockEnv.OPS_ENABLED = 'false'
+    const res = await request(app).get('/api/ops/mahallas')
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 503 when no active district found', async () => {
+    mockDistrictFindFirst.mockResolvedValue(null)
+    const res = await request(app).get('/api/ops/mahallas')
+    expect(res.status).toBe(503)
+    expect(res.body).toMatchObject({ error: 'No active district' })
+  })
+
+  it('returns mahalla list for active district', async () => {
+    mockMahallaFindMany.mockResolvedValue([
+      { id: 1, name: 'Навбаҳор маҳалласи' },
+      { id: 2, name: 'Олмазор маҳалласи' },
+    ])
+    const res = await request(app).get('/api/ops/mahallas')
+    expect(res.status).toBe(200)
+    expect(res.body).toHaveLength(2)
+    expect(res.body[0]).toMatchObject({ id: 1, name: 'Навбаҳор маҳалласи' })
+  })
+
+  it('returns empty array when district has no mahallas', async () => {
+    // default: mockMahallaFindMany → []
+    const res = await request(app).get('/api/ops/mahallas')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual([])
+  })
+
+  it('returns 500 on Prisma error', async () => {
+    mockMahallaFindMany.mockRejectedValue(new Error('DB error'))
+    const res = await request(app).get('/api/ops/mahallas')
+    expect(res.status).toBe(500)
+    expect(res.body).toMatchObject({ error: 'Internal Server Error' })
+  })
+})
+
+// ─── POST /api/ops/simulate-webhook ──────────────────────────────────────────
+
+describe('POST /api/ops/simulate-webhook', () => {
+  let app: ReturnType<typeof createTestApp>
+
+  beforeEach(() => {
+    resetMocks()
+    app = createTestApp()
+  })
+
+  it('returns 404 when OPS_ENABLED is not "true"', async () => {
+    mockEnv.OPS_ENABLED = 'false'
+    const res = await request(app)
+      .post('/api/ops/simulate-webhook')
+      .send({ mahallaId: 1, text: 'Test' })
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 400 when mahallaId is missing', async () => {
+    const res = await request(app)
+      .post('/api/ops/simulate-webhook')
+      .send({ text: 'Test' })
+    expect(res.status).toBe(400)
+    expect(res.body).toMatchObject({ error: 'Bad Request' })
+  })
+
+  it('returns 400 when text is missing', async () => {
+    const res = await request(app)
+      .post('/api/ops/simulate-webhook')
+      .send({ mahallaId: 1 })
+    expect(res.status).toBe(400)
+    expect(res.body).toMatchObject({ error: 'Bad Request' })
+  })
+
+  it('returns 400 when text is empty string', async () => {
+    const res = await request(app)
+      .post('/api/ops/simulate-webhook')
+      .send({ mahallaId: 1, text: '' })
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 200 with decision object on success', async () => {
+    const res = await request(app)
+      .post('/api/ops/simulate-webhook')
+      .send({ mahallaId: 1, text: "Suv yo'q" })
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({
+      decision:       'queued',
+      filterMode:     'keyword_gate',
+      keywordMatched: true,
+      matchedPhrase:  'suv',
+    })
+    expect(mockSimulateWebhook).toHaveBeenCalledOnce()
+    expect(mockSimulateWebhook).toHaveBeenCalledWith(
+      expect.objectContaining({ mahallaId: 1, text: "Suv yo'q" })
+    )
+  })
+
+  it('returns 503 when simulator throws "No active district"', async () => {
+    mockSimulateWebhook.mockRejectedValue(new Error('No active district'))
+    const res = await request(app)
+      .post('/api/ops/simulate-webhook')
+      .send({ mahallaId: 1, text: 'Test' })
+    expect(res.status).toBe(503)
+    expect(res.body).toMatchObject({ error: 'No active district' })
+  })
+
+  it('returns 404 when simulator throws "Mahalla not found in active district"', async () => {
+    mockSimulateWebhook.mockRejectedValue(new Error('Mahalla not found in active district'))
+    const res = await request(app)
+      .post('/api/ops/simulate-webhook')
+      .send({ mahallaId: 99, text: 'Test' })
+    expect(res.status).toBe(404)
+    expect(res.body).toMatchObject({ error: 'Mahalla not found' })
+  })
+
+  it('returns 500 on unexpected simulator error', async () => {
+    mockSimulateWebhook.mockRejectedValue(new Error('Unexpected failure'))
+    const res = await request(app)
+      .post('/api/ops/simulate-webhook')
+      .send({ mahallaId: 1, text: 'Test' })
+    expect(res.status).toBe(500)
+    expect(res.body).toMatchObject({
+      statusCode: 500,
+      error:      'Internal Server Error',
+    })
+  })
+})
+
+// ─── POST /api/ops/simulate-message ──────────────────────────────────────────
+
+describe('POST /api/ops/simulate-message', () => {
+  let app: ReturnType<typeof createTestApp>
+
+  beforeEach(() => {
+    resetMocks()
+    app = createTestApp()
+  })
+
+  it('returns 404 when OPS_ENABLED is not "true"', async () => {
+    mockEnv.OPS_ENABLED = 'false'
+    const res = await request(app)
+      .post('/api/ops/simulate-message')
+      .send({ mahallaId: 1, text: 'Test' })
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 400 when mahallaId is missing', async () => {
+    const res = await request(app)
+      .post('/api/ops/simulate-message')
+      .send({ text: 'Test' })
+    expect(res.status).toBe(400)
+    expect(res.body).toMatchObject({ error: 'Bad Request' })
+  })
+
+  it('returns 400 when text is missing', async () => {
+    const res = await request(app)
+      .post('/api/ops/simulate-message')
+      .send({ mahallaId: 1 })
+    expect(res.status).toBe(400)
+    expect(res.body).toMatchObject({ error: 'Bad Request' })
+  })
+
+  it('returns 200 with rawMessageId on success', async () => {
+    const res = await request(app)
+      .post('/api/ops/simulate-message')
+      .send({ mahallaId: 1, text: "Elektr o'chdi" })
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ rawMessageId: 42 })
+    expect(mockInjectSimulatedMessage).toHaveBeenCalledOnce()
+    expect(mockInjectSimulatedMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ mahallaId: 1, text: "Elektr o'chdi" })
+    )
+  })
+
+  it('returns 503 when simulator throws "No active district"', async () => {
+    mockInjectSimulatedMessage.mockRejectedValue(new Error('No active district'))
+    const res = await request(app)
+      .post('/api/ops/simulate-message')
+      .send({ mahallaId: 1, text: 'Test' })
+    expect(res.status).toBe(503)
+    expect(res.body).toMatchObject({ error: 'No active district' })
+  })
+
+  it('returns 404 when simulator throws "Mahalla not found in active district"', async () => {
+    mockInjectSimulatedMessage.mockRejectedValue(new Error('Mahalla not found in active district'))
+    const res = await request(app)
+      .post('/api/ops/simulate-message')
+      .send({ mahallaId: 99, text: 'Test' })
+    expect(res.status).toBe(404)
+    expect(res.body).toMatchObject({ error: 'Mahalla not found' })
+  })
+
+  it('returns 500 on unexpected simulator error', async () => {
+    mockInjectSimulatedMessage.mockRejectedValue(new Error('Unexpected failure'))
+    const res = await request(app)
+      .post('/api/ops/simulate-message')
+      .send({ mahallaId: 1, text: 'Test' })
+    expect(res.status).toBe(500)
+    expect(res.body).toMatchObject({
+      statusCode: 500,
+      error:      'Internal Server Error',
     })
   })
 })
