@@ -104,7 +104,7 @@ development_status:
   epic-6: in-progress
   6-1-ops-console-page-shell-and-guard: done
   6-2-message-simulator: done
-  6-3-pipeline-event-log-and-batch-controls: review
+  6-3-pipeline-event-log-and-batch-controls: done
   6-4-keyword-registry-crud: backlog
   6-5-signals-browser-and-system-health-dashboard: backlog
   epic-6-retrospective: optional
