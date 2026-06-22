@@ -53,7 +53,13 @@ describe('OpsPage', () => {
         status: 200,
         body:   { schedulerStatus: 'idle', lastBatchAt: null, lastBatchDuration: null, queueDepth: 0, lastBatchResult: null, recentErrors: [] },
       },
+      'system-health': {
+        status: 200,
+        body:   { database: { status: 'ok', latencyMs: 5 }, scheduler: { status: 'stopped', nextRunInSeconds: null }, aiApi: { status: 'unknown', lastCheckedAt: null }, bot: { status: 'ok' }, botConnectivity: [] },
+      },
       'mahallas': { status: 200, body: [] },
+      'signals':  { status: 200, body: { items: [], total: 0 } },
+      'raw-messages': { status: 200, body: { items: [], total: 0 } },
     })
 
     render(<OpsPage />)
@@ -70,8 +76,12 @@ describe('OpsPage', () => {
 
     await userEvent.click(screen.getByRole('menuitem', { name: 'Health' }))
 
-    expect(screen.getByText('Health panel — coming in a later story')).toBeInTheDocument()
+    // HealthPanel is now implemented — Infrastructure Health section is rendered
+    await waitFor(() => {
+      expect(screen.getByText('Infrastructure Health')).toBeInTheDocument()
+    })
     expect(document.title).toBe('Ops Console – Mahalla Ovozi [Phase 1] — Health')
+
   })
 
   it('shows the disabled banner and hides panels when the ops API returns 404', async () => {

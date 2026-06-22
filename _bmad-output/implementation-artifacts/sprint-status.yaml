@@ -106,5 +106,5 @@ development_status:
   6-2-message-simulator: done
   6-3-pipeline-event-log-and-batch-controls: done
   6-4-keyword-registry-crud: done
-  6-5-signals-browser-and-system-health-dashboard: backlog
+  6-5-signals-browser-and-system-health-dashboard: done
   epic-6-retrospective: optional

@@ -42,12 +42,17 @@ const mockKeywordFindFirst = vi.hoisted(() => vi.fn())
 const mockKeywordCreate    = vi.hoisted(() => vi.fn())
 const mockKeywordUpdateMany = vi.hoisted(() => vi.fn())
 const mockKeywordDeleteMany = vi.hoisted(() => vi.fn())
+const mockSignalMessageFindMany   = vi.hoisted(() => vi.fn())
+const mockSignalMessageCount      = vi.hoisted(() => vi.fn())
+const mockSignalMessageDeleteMany = vi.hoisted(() => vi.fn())
+const mockRawMessageFindMany      = vi.hoisted(() => vi.fn())
+const mockRawMessageDeleteMany    = vi.hoisted(() => vi.fn())
 
 vi.mock('../shared/db.js', () => ({
   prisma: {
     district:      { findFirst: mockDistrictFindFirst },
     batchHealth:   { findFirst: mockBatchHealthFindFirst, findMany: mockBatchHealthFindMany },
-    rawMessage:    { count: mockRawMessageCount },
+    rawMessage:    { count: mockRawMessageCount, findMany: mockRawMessageFindMany, deleteMany: mockRawMessageDeleteMany },
     mahalla:       { findMany: mockMahallaFindMany },
     pipelineEvent: { findMany: mockPipelineEventFindMany },
     keyword: {
@@ -56,6 +61,11 @@ vi.mock('../shared/db.js', () => ({
       create:    mockKeywordCreate,
       updateMany: mockKeywordUpdateMany,
       deleteMany: mockKeywordDeleteMany,
+    },
+    signalMessage: {
+      findMany:   mockSignalMessageFindMany,
+      count:      mockSignalMessageCount,
+      deleteMany: mockSignalMessageDeleteMany,
     },
     $queryRaw:     mockQueryRaw,
   },
@@ -72,6 +82,30 @@ vi.mock('./simulator.js', () => ({
 // Logger mock
 vi.mock('../shared/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+}))
+
+// Mock signals/mapper.js — avoids needing real Prisma join shapes in tests
+vi.mock('../signals/mapper.js', () => ({
+  mapSignalRow: vi.fn((row: Record<string, unknown>) => ({
+    id:                 row['id'],
+    telegramUpdateId:   row['telegram_update_id'],
+    telegramMessageId:  row['telegram_message_id'],
+    telegramMessageUrl: null,
+    districtId:         row['district_id'],
+    mahallaId:          row['mahalla_id'],
+    mahallaName:        (row['mahalla'] as { name: string })?.name ?? 'Test Mahalla',
+    senderDisplayName:  null,
+    senderUsername:     null,
+    telegramTimestamp:  (row['telegram_timestamp'] as Date)?.toISOString() ?? new Date().toISOString(),
+    rawText:            row['raw_text'],
+    textSource:         row['text_source'] ?? 'text',
+    category:           row['category'] ?? 'water',
+    hokimRelated:       row['hokim_related'] ?? false,
+    keywordMatched:     row['keyword_matched'] ?? false,
+    matchedKeyword:     row['matched_keyword'] ?? null,
+    shortLabel:         row['short_label'] ?? null,
+    classifiedAt:       (row['classified_at'] as Date)?.toISOString() ?? new Date().toISOString(),
+  })),
 }))
 
 import { opsRouter } from './index.js'
@@ -160,6 +194,12 @@ function resetMocks() {
   })
   mockKeywordUpdateMany.mockResolvedValue({ count: 1 })
   mockKeywordDeleteMany.mockResolvedValue({ count: 1 })
+  // Signal + raw-message defaults
+  mockSignalMessageFindMany.mockResolvedValue([])
+  mockSignalMessageCount.mockResolvedValue(0)
+  mockSignalMessageDeleteMany.mockResolvedValue({ count: 0 })
+  mockRawMessageFindMany.mockResolvedValue([])
+  mockRawMessageDeleteMany.mockResolvedValue({ count: 0 })
 }
 
 // ─── Guard tests ──────────────────────────────────────────────────────────────
@@ -1224,5 +1264,455 @@ describe('DELETE /api/ops/keywords/:id', () => {
     const res = await request(app).delete('/api/ops/keywords/1')
     expect(res.status).toBe(500)
     expect(res.body).toMatchObject({ message: 'Keyword delete failed' })
+  })
+})
+
+// \u2500\u2500\u2500 Story 6.5 fixtures \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+const SIGNAL_ROW = {
+  id:                  10,
+  telegram_update_id:  101,
+  telegram_message_id: 202,
+  district_id:         1,
+  mahalla_id:          2,
+  mahalla:             { name: '\u041d\u0430\u0432\u0431\u0430\u04b3\u043e\u0440 \u043c\u0430\u04b3\u0430\u043b\u043b\u0430\u0441\u0438', telegram_chat_id: BigInt(-1001234567890) },
+  sender_display_name: 'Alisher',
+  sender_username:     null,
+  telegram_timestamp:  new Date('2026-06-22T10:00:00.000Z'),
+  raw_text:            "Suv yo'q",
+  text_source:         'text',
+  category:            'water',
+  hokim_related:       false,
+  keyword_matched:     true,
+  matched_keyword:     'suv',
+  short_label:         null,
+  classified_at:       new Date('2026-06-22T10:05:00.000Z'),
+  created_at:          new Date('2026-06-22T10:05:00.000Z'),
+}
+
+const RAW_MESSAGE_ROW = {
+  id:                  5,
+  telegram_update_id:  -1,  // simulated (negative)
+  telegram_message_id: -2,
+  chat_id:             BigInt(-1001234567890),
+  district_id:         1,
+  mahalla_id:          2,
+  mahalla:             { name: '\u041d\u0430\u0432\u0431\u0430\u04b3\u043e\u0440 \u043c\u0430\u04b3\u0430\u043b\u043b\u0430\u0441\u0438' },
+  sender_display_name: 'Test User',
+  sender_username:     null,
+  text:                "Gaz yo'q",
+  text_source:         'text',
+  telegram_timestamp:  new Date('2026-06-22T10:00:00.000Z'),
+  sender_is_bot:       false,
+  created_at:          new Date('2026-06-22T10:00:00.000Z'),
+}
+
+// \u2500\u2500\u2500 GET /api/ops/signals \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+describe('GET /api/ops/signals', () => {
+  let app: ReturnType<typeof createTestApp>
+
+  beforeEach(() => {
+    resetMocks()
+    app = createTestApp()
+  })
+
+  it('returns 404 when ops disabled', async () => {
+    mockEnv.OPS_ENABLED = 'false'
+    const res = await request(app).get('/api/ops/signals')
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 503 when no active district', async () => {
+    mockDistrictFindFirst.mockResolvedValue(null)
+    const res = await request(app).get('/api/ops/signals')
+    expect(res.status).toBe(503)
+    expect(res.body).toMatchObject({ error: 'No active district' })
+  })
+
+  it('returns paginated signals list with items and total', async () => {
+    mockSignalMessageFindMany.mockResolvedValue([SIGNAL_ROW])
+    mockSignalMessageCount.mockResolvedValue(1)
+    const res = await request(app).get('/api/ops/signals')
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({ total: 1 })
+    expect(res.body.items).toHaveLength(1)
+  })
+
+  it('queries with district_id filter from active district', async () => {
+    mockSignalMessageFindMany.mockResolvedValue([])
+    mockSignalMessageCount.mockResolvedValue(0)
+    await request(app).get('/api/ops/signals')
+    expect(mockSignalMessageFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ district_id: ACTIVE_DISTRICT.id }),
+      })
+    )
+  })
+
+  it('applies category filter when valid category param provided', async () => {
+    mockSignalMessageFindMany.mockResolvedValue([])
+    mockSignalMessageCount.mockResolvedValue(0)
+    await request(app).get('/api/ops/signals?category=water')
+    expect(mockSignalMessageFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ category: 'water' }),
+      })
+    )
+  })
+
+  it('ignores invalid category param silently', async () => {
+    mockSignalMessageFindMany.mockResolvedValue([])
+    mockSignalMessageCount.mockResolvedValue(0)
+    await request(app).get('/api/ops/signals?category=invalid')
+    const callArg = mockSignalMessageFindMany.mock.calls[0]?.[0] as { where: Record<string, unknown> }
+    expect(callArg?.where?.category).toBeUndefined()
+  })
+
+  it('applies mahalla_id filter when valid integer provided', async () => {
+    mockSignalMessageFindMany.mockResolvedValue([])
+    mockSignalMessageCount.mockResolvedValue(0)
+    await request(app).get('/api/ops/signals?mahalla_id=2')
+    expect(mockSignalMessageFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ mahalla_id: 2 }),
+      })
+    )
+  })
+
+  it('applies hokimRelated filter for true', async () => {
+    mockSignalMessageFindMany.mockResolvedValue([])
+    mockSignalMessageCount.mockResolvedValue(0)
+    await request(app).get('/api/ops/signals?hokim_related=true')
+    expect(mockSignalMessageFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ hokim_related: true }),
+      })
+    )
+  })
+
+  it('ignores invalid from/to date params silently', async () => {
+    mockSignalMessageFindMany.mockResolvedValue([])
+    mockSignalMessageCount.mockResolvedValue(0)
+    const res = await request(app).get('/api/ops/signals?from=not-a-date&to=also-invalid')
+    expect(res.status).toBe(200)
+    const callArg = mockSignalMessageFindMany.mock.calls[0]?.[0] as { where: Record<string, unknown> }
+    expect(callArg?.where?.telegram_timestamp).toBeUndefined()
+  })
+
+  it('defaults non-finite pagination params safely', async () => {
+    mockSignalMessageFindMany.mockResolvedValue([])
+    mockSignalMessageCount.mockResolvedValue(0)
+    const res = await request(app).get('/api/ops/signals?page=Infinity&limit=Infinity')
+    expect(res.status).toBe(200)
+    expect(mockSignalMessageFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 0, take: 50 })
+    )
+  })
+
+  it('includes mahalla name and telegram_chat_id in include clause for mapSignalRow', async () => {
+    mockSignalMessageFindMany.mockResolvedValue([])
+    mockSignalMessageCount.mockResolvedValue(0)
+    await request(app).get('/api/ops/signals')
+    expect(mockSignalMessageFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: { mahalla: { select: { name: true, telegram_chat_id: true } } },
+      })
+    )
+  })
+
+  it('returns 500 on Prisma error', async () => {
+    mockSignalMessageFindMany.mockRejectedValue(new Error('DB failure'))
+    const res = await request(app).get('/api/ops/signals')
+    expect(res.status).toBe(500)
+    expect(res.body).toMatchObject({
+      statusCode: 500,
+      error:      'Internal Server Error',
+      message:    'Signals query failed',
+    })
+  })
+})
+
+// \u2500\u2500\u2500 GET /api/ops/raw-messages \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+describe('GET /api/ops/raw-messages', () => {
+  let app: ReturnType<typeof createTestApp>
+
+  beforeEach(() => {
+    resetMocks()
+    app = createTestApp()
+  })
+
+  it('returns 404 when ops disabled', async () => {
+    mockEnv.OPS_ENABLED = 'false'
+    const res = await request(app).get('/api/ops/raw-messages')
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 503 when no active district', async () => {
+    mockDistrictFindFirst.mockResolvedValue(null)
+    const res = await request(app).get('/api/ops/raw-messages')
+    expect(res.status).toBe(503)
+    expect(res.body).toMatchObject({ error: 'No active district' })
+  })
+
+  it('returns paginated raw messages list with items and total', async () => {
+    mockRawMessageFindMany.mockResolvedValue([RAW_MESSAGE_ROW])
+    mockRawMessageCount.mockResolvedValue(1)
+    const res = await request(app).get('/api/ops/raw-messages')
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({ total: 1 })
+    expect(res.body.items).toHaveLength(1)
+  })
+
+  it('computes isSimulated=true when telegram_update_id < 0', async () => {
+    mockRawMessageFindMany.mockResolvedValue([RAW_MESSAGE_ROW])  // telegram_update_id = -1
+    mockRawMessageCount.mockResolvedValue(1)
+    const res = await request(app).get('/api/ops/raw-messages')
+    expect(res.status).toBe(200)
+    expect(res.body.items[0].isSimulated).toBe(true)
+  })
+
+  it('computes isSimulated=false when telegram_update_id >= 0', async () => {
+    mockRawMessageFindMany.mockResolvedValue([{ ...RAW_MESSAGE_ROW, telegram_update_id: 101 }])
+    mockRawMessageCount.mockResolvedValue(1)
+    const res = await request(app).get('/api/ops/raw-messages')
+    expect(res.status).toBe(200)
+    expect(res.body.items[0].isSimulated).toBe(false)
+  })
+
+  it('returns camelCase fields on each item', async () => {
+    mockRawMessageFindMany.mockResolvedValue([RAW_MESSAGE_ROW])
+    mockRawMessageCount.mockResolvedValue(1)
+    const res = await request(app).get('/api/ops/raw-messages')
+    expect(res.status).toBe(200)
+    expect(res.body.items[0]).toMatchObject({
+      id:          5,
+      mahallaId:   2,
+      mahallaName: '\u041d\u0430\u0432\u0431\u0430\u04b3\u043e\u0440 \u043c\u0430\u04b3\u0430\u043b\u043b\u0430\u0441\u0438',
+      textSource:  'text',
+      isSimulated: true,
+    })
+    expect(res.body.items[0].telegramTimestamp).toBe(RAW_MESSAGE_ROW.telegram_timestamp.toISOString())
+  })
+
+  it('defaults non-finite pagination params safely', async () => {
+    mockRawMessageFindMany.mockResolvedValue([])
+    mockRawMessageCount.mockResolvedValue(0)
+    const res = await request(app).get('/api/ops/raw-messages?page=Infinity&limit=Infinity')
+    expect(res.status).toBe(200)
+    expect(mockRawMessageFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 0, take: 50 })
+    )
+  })
+
+  it('returns 500 on Prisma error', async () => {
+    mockRawMessageFindMany.mockRejectedValue(new Error('DB failure'))
+    const res = await request(app).get('/api/ops/raw-messages')
+    expect(res.status).toBe(500)
+    expect(res.body).toMatchObject({
+      statusCode: 500,
+      error:      'Internal Server Error',
+      message:    'Raw messages query failed',
+    })
+  })
+})
+
+// \u2500\u2500\u2500 DELETE /api/ops/raw-messages/simulated \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+describe('DELETE /api/ops/raw-messages/simulated', () => {
+  let app: ReturnType<typeof createTestApp>
+
+  beforeEach(() => {
+    resetMocks()
+    app = createTestApp()
+  })
+
+  it('returns 404 when ops disabled', async () => {
+    mockEnv.OPS_ENABLED = 'false'
+    const res = await request(app).delete('/api/ops/raw-messages/simulated')
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 503 when no active district', async () => {
+    mockDistrictFindFirst.mockResolvedValue(null)
+    const res = await request(app).delete('/api/ops/raw-messages/simulated')
+    expect(res.status).toBe(503)
+  })
+
+  it('deletes simulated rows and returns count', async () => {
+    mockRawMessageDeleteMany.mockResolvedValue({ count: 3 })
+    const res = await request(app).delete('/api/ops/raw-messages/simulated')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ deleted: 3 })
+    expect(mockRawMessageDeleteMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ telegram_update_id: { lt: 0 } }),
+      })
+    )
+  })
+
+  it('scopes delete to active district_id', async () => {
+    mockRawMessageDeleteMany.mockResolvedValue({ count: 0 })
+    await request(app).delete('/api/ops/raw-messages/simulated')
+    expect(mockRawMessageDeleteMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ district_id: ACTIVE_DISTRICT.id }),
+      })
+    )
+  })
+
+  it('returns 500 on Prisma error', async () => {
+    mockRawMessageDeleteMany.mockRejectedValue(new Error('DB failure'))
+    const res = await request(app).delete('/api/ops/raw-messages/simulated')
+    expect(res.status).toBe(500)
+    expect(res.body).toMatchObject({ message: 'Delete simulated raw messages failed' })
+  })
+})
+
+// \u2500\u2500\u2500 DELETE /api/ops/raw-messages?confirm=DELETE_ALL_RAW \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+describe('DELETE /api/ops/raw-messages (delete all)', () => {
+  let app: ReturnType<typeof createTestApp>
+
+  beforeEach(() => {
+    resetMocks()
+    app = createTestApp()
+  })
+
+  it('returns 400 without confirm param', async () => {
+    const res = await request(app).delete('/api/ops/raw-messages')
+    expect(res.status).toBe(400)
+    expect(res.body).toMatchObject({ statusCode: 400, error: 'Bad Request' })
+  })
+
+  it('returns 400 with wrong confirm param', async () => {
+    const res = await request(app).delete('/api/ops/raw-messages?confirm=WRONG')
+    expect(res.status).toBe(400)
+    expect(res.body).toMatchObject({ statusCode: 400 })
+  })
+
+  it('deletes all raw messages and returns count with correct confirm param', async () => {
+    mockRawMessageDeleteMany.mockResolvedValue({ count: 12 })
+    const res = await request(app).delete('/api/ops/raw-messages?confirm=DELETE_ALL_RAW')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ deleted: 12 })
+  })
+
+  it('returns 503 when no active district', async () => {
+    mockDistrictFindFirst.mockResolvedValue(null)
+    const res = await request(app).delete('/api/ops/raw-messages?confirm=DELETE_ALL_RAW')
+    expect(res.status).toBe(503)
+  })
+
+  it('returns 500 on Prisma error', async () => {
+    mockRawMessageDeleteMany.mockRejectedValue(new Error('DB failure'))
+    const res = await request(app).delete('/api/ops/raw-messages?confirm=DELETE_ALL_RAW')
+    expect(res.status).toBe(500)
+    expect(res.body).toMatchObject({ message: 'Delete all raw messages failed' })
+  })
+})
+
+// \u2500\u2500\u2500 DELETE /api/ops/signals/simulated \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+describe('DELETE /api/ops/signals/simulated', () => {
+  let app: ReturnType<typeof createTestApp>
+
+  beforeEach(() => {
+    resetMocks()
+    app = createTestApp()
+  })
+
+  it('returns 404 when ops disabled', async () => {
+    mockEnv.OPS_ENABLED = 'false'
+    const res = await request(app).delete('/api/ops/signals/simulated')
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 503 when no active district', async () => {
+    mockDistrictFindFirst.mockResolvedValue(null)
+    const res = await request(app).delete('/api/ops/signals/simulated')
+    expect(res.status).toBe(503)
+  })
+
+  it('deletes simulated signals and returns count', async () => {
+    mockSignalMessageDeleteMany.mockResolvedValue({ count: 5 })
+    const res = await request(app).delete('/api/ops/signals/simulated')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ deleted: 5 })
+    expect(mockSignalMessageDeleteMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ telegram_update_id: { lt: 0 } }),
+      })
+    )
+  })
+
+  it('scopes delete to active district_id', async () => {
+    mockSignalMessageDeleteMany.mockResolvedValue({ count: 0 })
+    await request(app).delete('/api/ops/signals/simulated')
+    expect(mockSignalMessageDeleteMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ district_id: ACTIVE_DISTRICT.id }),
+      })
+    )
+  })
+
+  it('returns 500 on Prisma error', async () => {
+    mockSignalMessageDeleteMany.mockRejectedValue(new Error('DB failure'))
+    const res = await request(app).delete('/api/ops/signals/simulated')
+    expect(res.status).toBe(500)
+    expect(res.body).toMatchObject({ message: 'Delete simulated signals failed' })
+  })
+})
+
+// \u2500\u2500\u2500 DELETE /api/ops/signals?confirm=DELETE_ALL_SIGNALS \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+
+describe('DELETE /api/ops/signals (delete all)', () => {
+  let app: ReturnType<typeof createTestApp>
+
+  beforeEach(() => {
+    resetMocks()
+    app = createTestApp()
+  })
+
+  it('returns 400 without confirm param', async () => {
+    const res = await request(app).delete('/api/ops/signals')
+    expect(res.status).toBe(400)
+    expect(res.body).toMatchObject({ statusCode: 400, error: 'Bad Request' })
+  })
+
+  it('returns 400 with wrong confirm param', async () => {
+    const res = await request(app).delete('/api/ops/signals?confirm=WRONG')
+    expect(res.status).toBe(400)
+  })
+
+  it('deletes all signals and returns count with correct confirm param', async () => {
+    mockSignalMessageDeleteMany.mockResolvedValue({ count: 20 })
+    const res = await request(app).delete('/api/ops/signals?confirm=DELETE_ALL_SIGNALS')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ deleted: 20 })
+  })
+
+  it('scopes delete to active district_id', async () => {
+    mockSignalMessageDeleteMany.mockResolvedValue({ count: 0 })
+    await request(app).delete('/api/ops/signals?confirm=DELETE_ALL_SIGNALS')
+    expect(mockSignalMessageDeleteMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ district_id: ACTIVE_DISTRICT.id }),
+      })
+    )
+  })
+
+  it('returns 503 when no active district', async () => {
+    mockDistrictFindFirst.mockResolvedValue(null)
+    const res = await request(app).delete('/api/ops/signals?confirm=DELETE_ALL_SIGNALS')
+    expect(res.status).toBe(503)
+  })
+
+  it('returns 500 on Prisma error', async () => {
+    mockSignalMessageDeleteMany.mockRejectedValue(new Error('DB failure'))
+    const res = await request(app).delete('/api/ops/signals?confirm=DELETE_ALL_SIGNALS')
+    expect(res.status).toBe(500)
+    expect(res.body).toMatchObject({ message: 'Delete all signals failed' })
   })
 })
