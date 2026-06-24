@@ -1,5 +1,5 @@
 # generated: 2026-06-03
-# last_updated: 2026-06-23
+# last_updated: 2026-06-24
 # project: mahalla-ovozi
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context recommended)
 
 generated: 2026-06-03
-last_updated: 2026-06-23
+last_updated: 2026-06-24
 project: mahalla-ovozi
 project_key: NOKEY
 tracking_system: file-system
@@ -82,10 +82,12 @@ development_status:
   # EPIC 4: Filtering, Search & Context Drawer
   # Goal: Time/mahalla filters, keyword search, context drawer.
   # ─────────────────────────────────────────────────────────────────────────
-  epic-4: done
+  epic-4: in-progress
   4-1-filter-bar-time-range-and-mahalla-filter: done
   4-2-keyword-search: done
   4-3-context-drawer: done
+  4-4-context-drawer-ui: ready-for-dev
+  4-5-drawer-card-swap-and-filter-state-persistence: backlog
   epic-4-retrospective: optional
 
   # ─────────────────────────────────────────────────────────────────────────
