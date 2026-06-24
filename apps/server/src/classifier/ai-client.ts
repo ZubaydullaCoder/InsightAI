@@ -1,38 +1,52 @@
-import { GoogleGenAI } from '@google/genai'
-import { zodToJsonSchema } from 'zod-to-json-schema'
 import { env } from '../shared/env.js'
-import { buildPrompt } from './prompt.js'
+import { logger } from '../shared/logger.js'
+import { classifyWithGemini } from './providers/gemini.js'
+import { classifyWithOllama } from './providers/ollama.js'
+import { classifyWithOpenAiCompatible } from './providers/openai-compatible.js'
+import { classifyWithRuleOnly } from './providers/rule-only.js'
+import type { ProviderRawResult } from './providers/types.js'
 import { ClassifierOutputSchema, type ClassifierOutput } from './schema.js'
 
-const ai = new GoogleGenAI({ apiKey: env.AI_API_KEY })
-
 export async function classifyMessage(text: string): Promise<ClassifierOutput> {
-  const response = await ai.models.generateContent({
-    model:    env.AI_MODEL,
-    contents: buildPrompt(text),
-    config:   {
-      responseMimeType: 'application/json',
-      responseJsonSchema: zodToJsonSchema(ClassifierOutputSchema),
-      temperature: 0,
-    },
-  })
-
-  // P-2: `??` only catches null/undefined — an empty string from a safety-blocked
-  // or quota-exhausted response would reach JSON.parse('') and throw a bare
-  // SyntaxError with no diagnostic context.
-  const rawText = response.text
-  if (!rawText) {
-    throw new Error(
-      'AI returned empty or null response (possible safety block or quota exhaustion)',
-    )
-  }
-  const rawJson: unknown = JSON.parse(rawText)
-
-  const result = ClassifierOutputSchema.safeParse(rawJson)
+  const rawResult = await classifyWithConfiguredProvider(text)
+  const result = ClassifierOutputSchema.safeParse(rawResult.rawJson)
 
   if (!result.success) {
+    logger.error(
+      {
+        event:     'classifier_schema_invalid',
+        provider:  rawResult.provider,
+        model:     rawResult.model,
+        latencyMs: rawResult.latencyMs,
+        err:       result.error,
+      },
+      'Classifier provider output failed schema validation',
+    )
     throw new Error(`AI output schema invalid: ${result.error.message}`)
   }
 
+  logger.info(
+    {
+      event:     'classifier_provider_success',
+      provider:  rawResult.provider,
+      model:     rawResult.model,
+      latencyMs: rawResult.latencyMs,
+    },
+    'Classifier provider returned valid output',
+  )
+
   return result.data
+}
+
+async function classifyWithConfiguredProvider(text: string): Promise<ProviderRawResult> {
+  switch (env.AI_PROVIDER) {
+    case 'gemini':
+      return classifyWithGemini(text)
+    case 'ollama':
+      return classifyWithOllama(text)
+    case 'openai-compatible':
+      return classifyWithOpenAiCompatible(text)
+    case 'rule-only':
+      return classifyWithRuleOnly(text)
+  }
 }

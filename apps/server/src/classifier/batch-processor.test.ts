@@ -177,6 +177,52 @@ describe('classifyBatch', () => {
     })
   })
 
+  it('keeps timed-out provider failures in raw_messages after retry exhaustion', async () => {
+    aiMocks.classifyMessage.mockRejectedValue(
+      new Error('Ollama classification timed out after 30000ms'),
+    )
+
+    const result = await classifyBatch(1, { sleep: () => Promise.resolve() })
+
+    expect(result.status).toBe('failed')
+    expect(result.error_message).toContain('raw message IDs: 10')
+    expect(aiMocks.classifyMessage).toHaveBeenCalledTimes(3)
+    expect(prismaMocks.rawMessageDelete).not.toHaveBeenCalled()
+    expect(prismaMocks.signalMessageCreate).not.toHaveBeenCalled()
+    expect(prismaMocks.transaction).not.toHaveBeenCalled()
+    expect(loggerMocks.warn).toHaveBeenCalledTimes(2)
+    expect(loggerMocks.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        districtId:    1,
+        rawMessageId:  10,
+        attempts:      3,
+        err:           expect.any(Error),
+      }),
+      'AI classification failed after max retries; message stays in raw_messages',
+    )
+  })
+
+  it('keeps schema-invalid provider failures in raw_messages after retry exhaustion', async () => {
+    aiMocks.classifyMessage.mockRejectedValue(
+      new Error('AI output schema invalid: signal category required'),
+    )
+
+    const result = await classifyBatch(1, { sleep: () => Promise.resolve() })
+
+    expect(result.status).toBe('failed')
+    expect(result.error_message).toContain('raw message IDs: 10')
+    expect(aiMocks.classifyMessage).toHaveBeenCalledTimes(3)
+    expect(prismaMocks.rawMessageDelete).not.toHaveBeenCalled()
+    expect(prismaMocks.signalMessageCreate).not.toHaveBeenCalled()
+    expect(prismaMocks.transaction).not.toHaveBeenCalled()
+    expect(prismaMocks.batchHealthCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        status:        'failed',
+        error_message: expect.stringContaining('raw message IDs: 10'),
+      }),
+    })
+  })
+
   it('clears raw message only when signal write hits a unique constraint', async () => {
     aiMocks.classifyMessage.mockResolvedValue(signalOutput())
     prismaMocks.transaction.mockRejectedValue(

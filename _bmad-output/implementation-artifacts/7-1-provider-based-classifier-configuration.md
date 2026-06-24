@@ -1,6 +1,6 @@
 # Story 7.1: Provider-Based Classifier Configuration
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -38,71 +38,71 @@ so that Phase 1 can validate classification locally with Ollama/Gemma while pres
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Add provider-aware env validation (AC: 1, 2, 3, 4, 5, 8, 10)
-  - [ ] Add `AI_PROVIDER` enum: `gemini | ollama | openai-compatible | rule-only`, default `gemini`.
-  - [ ] Add `AI_BASE_URL` optional string.
-  - [ ] Add `AI_TIMEOUT_MS` coerced positive integer defaulting to `30000`.
-  - [ ] Change `AI_API_KEY` from unconditionally required to conditionally required by provider.
-  - [ ] Keep `AI_MODEL` default `gemini-2.5-flash` for the default Gemini path.
-  - [ ] Fail fast for `ollama` and `openai-compatible` when the effective model is missing or still the Gemini default by accident.
-  - [ ] Fail fast for `openai-compatible` when `AI_BASE_URL` or `AI_API_KEY` is missing.
+- [x] Task 1: Add provider-aware env validation (AC: 1, 2, 3, 4, 5, 8, 10)
+  - [x] Add `AI_PROVIDER` enum: `gemini | ollama | openai-compatible | rule-only`, default `gemini`.
+  - [x] Add `AI_BASE_URL` optional string.
+  - [x] Add `AI_TIMEOUT_MS` coerced positive integer defaulting to `30000`.
+  - [x] Change `AI_API_KEY` from unconditionally required to conditionally required by provider.
+  - [x] Keep `AI_MODEL` default `gemini-2.5-flash` for the default Gemini path.
+  - [x] Fail fast for `ollama` and `openai-compatible` when the effective model is missing or still the Gemini default by accident.
+  - [x] Fail fast for `openai-compatible` when `AI_BASE_URL` or `AI_API_KEY` is missing.
 
-- [ ] Task 2: Introduce a provider boundary under `apps/server/src/classifier/` (AC: 1, 2, 6, 9, 11)
-  - [ ] Keep `classifyMessage(text: string): Promise<ClassifierOutput>` as the public entry used by `batch-processor.ts`.
-  - [ ] Move provider-specific calls behind small provider functions or modules under `apps/server/src/classifier/providers/`.
-  - [ ] Preserve `buildPrompt(text)` and `ClassifierOutputSchema` as shared classifier logic.
-  - [ ] Do not move batch persistence, raw-message deletion, retry policy, keyword logic, or prompt ownership into providers.
-  - [ ] Avoid new dependencies unless absolutely necessary; Node 20+ native `fetch` and `AbortController` are sufficient for Ollama and OpenAI-compatible HTTP calls.
+- [x] Task 2: Introduce a provider boundary under `apps/server/src/classifier/` (AC: 1, 2, 6, 9, 11)
+  - [x] Keep `classifyMessage(text: string): Promise<ClassifierOutput>` as the public entry used by `batch-processor.ts`.
+  - [x] Move provider-specific calls behind small provider functions or modules under `apps/server/src/classifier/providers/`.
+  - [x] Preserve `buildPrompt(text)` and `ClassifierOutputSchema` as shared classifier logic.
+  - [x] Do not move batch persistence, raw-message deletion, retry policy, keyword logic, or prompt ownership into providers.
+  - [x] Avoid new dependencies unless absolutely necessary; Node 20+ native `fetch` and `AbortController` are sufficient for Ollama and OpenAI-compatible HTTP calls.
 
-- [ ] Task 3: Preserve and isolate Gemini behavior (AC: 1, 3, 4, 6, 8)
-  - [ ] Continue using `@google/genai` with `ai.models.generateContent()`.
-  - [ ] Continue requesting JSON with `responseMimeType: 'application/json'` and `responseJsonSchema: zodToJsonSchema(ClassifierOutputSchema)`.
-  - [ ] Continue parsing `response.text` and validating with `ClassifierOutputSchema.safeParse()`.
-  - [ ] Add timeout/cancellation with `AbortController` or the SDK-supported abort signal path; throw a clear timeout error on expiry.
-  - [ ] Keep empty response handling explicit.
+- [x] Task 3: Preserve and isolate Gemini behavior (AC: 1, 3, 4, 6, 8)
+  - [x] Continue using `@google/genai` with `ai.models.generateContent()`.
+  - [x] Continue requesting JSON with `responseMimeType: 'application/json'` and `responseJsonSchema: zodToJsonSchema(ClassifierOutputSchema)`.
+  - [x] Continue parsing `response.text` and validating with `ClassifierOutputSchema.safeParse()`.
+  - [x] Add timeout/cancellation with `AbortController` or the SDK-supported abort signal path; throw a clear timeout error on expiry.
+  - [x] Keep empty response handling explicit.
 
-- [ ] Task 4: Add Ollama provider (AC: 2, 3, 4, 5, 6, 7, 8, 9)
-  - [ ] Use local HTTP by default: `AI_BASE_URL=http://localhost:11434/api` when `AI_PROVIDER=ollama`.
-  - [ ] Call Ollama chat or generate with `stream: false`, `temperature: 0`, and structured JSON output where supported.
-  - [ ] Parse the JSON string returned in the provider response body, then validate with `ClassifierOutputSchema`.
-  - [ ] Support a Gemma model name through `AI_MODEL` without hardcoding one specific local model.
-  - [ ] Do not require `AI_API_KEY` for this provider.
+- [x] Task 4: Add Ollama provider (AC: 2, 3, 4, 5, 6, 7, 8, 9)
+  - [x] Use local HTTP by default: `AI_BASE_URL=http://localhost:11434/api` when `AI_PROVIDER=ollama`.
+  - [x] Call Ollama chat or generate with `stream: false`, `temperature: 0`, and structured JSON output where supported.
+  - [x] Parse the JSON string returned in the provider response body, then validate with `ClassifierOutputSchema`.
+  - [x] Support a Gemma model name through `AI_MODEL` without hardcoding one specific local model.
+  - [x] Do not require `AI_API_KEY` for this provider.
 
-- [ ] Task 5: Add OpenAI-compatible provider (AC: 2, 3, 4, 5, 6, 7, 8, 9)
-  - [ ] Use `AI_BASE_URL` plus the OpenAI-compatible chat completions endpoint.
-  - [ ] Send `Authorization: Bearer ${AI_API_KEY}` only for this provider and never log the header or token.
-  - [ ] Send chat messages derived from the existing prompt.
-  - [ ] Prefer JSON Schema structured output when the provider supports `response_format.type = 'json_schema'`; otherwise use JSON object mode only if needed, but still validate with `ClassifierOutputSchema`.
-  - [ ] Treat non-2xx HTTP responses, missing choices, empty content, invalid JSON, and schema failures as retryable classification errors.
+- [x] Task 5: Add OpenAI-compatible provider (AC: 2, 3, 4, 5, 6, 7, 8, 9)
+  - [x] Use `AI_BASE_URL` plus the OpenAI-compatible chat completions endpoint.
+  - [x] Send `Authorization: Bearer ${AI_API_KEY}` only for this provider and never log the header or token.
+  - [x] Send chat messages derived from the existing prompt.
+  - [x] Prefer JSON Schema structured output when the provider supports `response_format.type = 'json_schema'`; otherwise use JSON object mode only if needed, but still validate with `ClassifierOutputSchema`.
+  - [x] Treat non-2xx HTTP responses, missing choices, empty content, invalid JSON, and schema failures as retryable classification errors.
 
-- [ ] Task 6: Add explicit rule-only provider (AC: 2, 3, 6, 9, 11)
-  - [ ] Require `AI_PROVIDER=rule-only`; do not silently fall back to it from provider failures.
-  - [ ] Return deterministic classifier-shaped results for local pipeline testing.
-  - [ ] Keep output validation in the same path as external providers so rule-only cannot bypass `ClassifierOutputSchema`.
-  - [ ] Keep the rules conservative and clearly scoped to test/validation use, not production classifier quality.
+- [x] Task 6: Add explicit rule-only provider (AC: 2, 3, 6, 9, 11)
+  - [x] Require `AI_PROVIDER=rule-only`; do not silently fall back to it from provider failures.
+  - [x] Return deterministic classifier-shaped results for local pipeline testing.
+  - [x] Keep output validation in the same path as external providers so rule-only cannot bypass `ClassifierOutputSchema`.
+  - [x] Keep the rules conservative and clearly scoped to test/validation use, not production classifier quality.
 
-- [ ] Task 7: Preserve retry/raw-message safety in batch flow (AC: 7, 9, 11)
-  - [ ] Keep `classifyMessageWithRetry()` in `batch-processor.ts` as the retry owner.
-  - [ ] Do not delete `raw_messages` when a provider call, timeout, parse, or schema validation error exhausts retries.
-  - [ ] Preserve the existing 3 attempts with exponential backoff unless a separate approved story changes retry policy.
-  - [ ] Keep signal write plus raw delete in one `$transaction`.
-  - [ ] Keep ignored messages deleted only after successful classification as `ignore`.
+- [x] Task 7: Preserve retry/raw-message safety in batch flow (AC: 7, 9, 11)
+  - [x] Keep `classifyMessageWithRetry()` in `batch-processor.ts` as the retry owner.
+  - [x] Do not delete `raw_messages` when a provider call, timeout, parse, or schema validation error exhausts retries.
+  - [x] Preserve the existing 3 attempts with exponential backoff unless a separate approved story changes retry policy.
+  - [x] Keep signal write plus raw delete in one `$transaction`.
+  - [x] Keep ignored messages deleted only after successful classification as `ignore`.
 
-- [ ] Task 8: Add focused tests (AC: all)
-  - [ ] Env/config tests: default Gemini, conditional API key requirements, Ollama no-key path, OpenAI-compatible required key/base URL, timeout default, invalid provider failure.
-  - [ ] Gemini tests: existing structured-output behavior still calls `@google/genai` with schema and validates output.
-  - [ ] Ollama tests: sends expected local HTTP request, no API key, parses response content, validates schema, handles non-2xx/invalid JSON/timeout as errors.
-  - [ ] OpenAI-compatible tests: sends bearer auth, model, messages, structured response format, parses `choices[0].message.content`, validates schema, handles failures.
-  - [ ] Rule-only tests: explicit provider returns valid schema-shaped results and is never used as silent fallback.
-  - [ ] Batch tests: timed-out/invalid provider output still leaves raw messages in place after retry exhaustion.
+- [x] Task 8: Add focused tests (AC: all)
+  - [x] Env/config tests: default Gemini, conditional API key requirements, Ollama no-key path, OpenAI-compatible required key/base URL, timeout default, invalid provider failure.
+  - [x] Gemini tests: existing structured-output behavior still calls `@google/genai` with schema and validates output.
+  - [x] Ollama tests: sends expected local HTTP request, no API key, parses response content, validates schema, handles non-2xx/invalid JSON/timeout as errors.
+  - [x] OpenAI-compatible tests: sends bearer auth, model, messages, structured response format, parses `choices[0].message.content`, validates schema, handles failures.
+  - [x] Rule-only tests: explicit provider returns valid schema-shaped results and is never used as silent fallback.
+  - [x] Batch tests: timed-out/invalid provider output still leaves raw messages in place after retry exhaustion.
 
-- [ ] Task 9: Verify and update only necessary docs/examples (AC: 10, 11, 12)
-  - [ ] Update `.env.example` or equivalent env sample if present.
-  - [ ] Do not update PRD, architecture, epics, project context, or sprint tracker during implementation unless a mismatch is discovered and separately approved.
-  - [ ] Run `pnpm lint`.
-  - [ ] Run `pnpm test`.
-  - [ ] Run `pnpm exec tsc --noEmit -p apps/server/tsconfig.json`.
-  - [ ] Run `git diff --check`.
+- [x] Task 9: Verify and update only necessary docs/examples (AC: 10, 11, 12)
+  - [x] Update `.env.example` or equivalent env sample if present.
+  - [x] Do not update PRD, architecture, epics, project context, or sprint tracker during implementation unless a mismatch is discovered and separately approved.
+  - [x] Run `pnpm lint`.
+  - [x] Run `pnpm test`.
+  - [x] Run `pnpm exec tsc --noEmit -p apps/server/tsconfig.json`.
+  - [x] Run `git diff --check`.
 
 ## Dev Notes
 
@@ -272,6 +272,82 @@ GPT-5 Codex
 
 ### Debug Log References
 
+- 2026-06-24: `pnpm vitest run apps/server/src/shared/env.test.ts` passed (8 tests).
+- 2026-06-24: `pnpm exec tsc --noEmit -p apps/server/tsconfig.json` passed.
+- 2026-06-24: `pnpm test` passed (34 files, 563 tests).
+- 2026-06-24: `pnpm lint` passed.
+- 2026-06-24: Red test confirmed `ai-client` still called Google directly before provider boundary implementation.
+- 2026-06-24: `pnpm vitest run apps/server/src/classifier/ai-client.test.ts` passed (2 tests).
+- 2026-06-24: `pnpm exec tsc --noEmit -p apps/server/tsconfig.json` passed.
+- 2026-06-24: `pnpm test` passed (35 files, 565 tests).
+- 2026-06-24: `pnpm lint` passed.
+- 2026-06-24: Verified installed `@google/genai@2.8.0` `GenerateContentConfig` includes `abortSignal`.
+- 2026-06-24: Red Gemini provider tests confirmed missing abort signal and timeout behavior before implementation.
+- 2026-06-24: `pnpm vitest run apps/server/src/classifier/providers/gemini.test.ts` passed (3 tests).
+- 2026-06-24: `pnpm exec tsc --noEmit -p apps/server/tsconfig.json` passed.
+- 2026-06-24: `pnpm test` passed (36 files, 568 tests).
+- 2026-06-24: `pnpm lint` passed.
+- 2026-06-24: Verified Ollama `/api/chat` request/response shape from official Ollama API docs via Context7.
+- 2026-06-24: `pnpm vitest run apps/server/src/classifier/providers/ollama.test.ts apps/server/src/classifier/ai-client.test.ts` passed (9 tests).
+- 2026-06-24: `pnpm exec tsc --noEmit -p apps/server/tsconfig.json` passed.
+- 2026-06-24: `pnpm test` passed (37 files, 575 tests).
+- 2026-06-24: `pnpm lint` passed.
+- 2026-06-24: Verified OpenAI Chat Completions and Structured Outputs request/response shape from official OpenAI docs.
+- 2026-06-24: `pnpm vitest run apps/server/src/classifier/providers/openai-compatible.test.ts apps/server/src/classifier/ai-client.test.ts` passed (12 tests).
+- 2026-06-24: `pnpm exec tsc --noEmit -p apps/server/tsconfig.json` passed.
+- 2026-06-24: `pnpm test` passed (38 files, 584 tests).
+- 2026-06-24: `pnpm lint` passed.
+- 2026-06-24: `pnpm vitest run apps/server/src/classifier/providers/rule-only.test.ts apps/server/src/classifier/ai-client.test.ts` passed (8 tests).
+- 2026-06-24: `pnpm exec tsc --noEmit -p apps/server/tsconfig.json` passed.
+- 2026-06-24: `pnpm test` passed (39 files, 588 tests).
+- 2026-06-24: `pnpm lint` passed.
+- 2026-06-24: `pnpm vitest run apps/server/src/classifier/batch-processor.test.ts` passed (9 tests).
+- 2026-06-24: `pnpm exec tsc --noEmit -p apps/server/tsconfig.json` passed.
+- 2026-06-24: `pnpm test` passed (39 files, 590 tests).
+- 2026-06-24: `pnpm lint` passed.
+- 2026-06-24: `pnpm vitest run apps/server/src/shared/env.test.ts` passed after Task 8 coverage audit (8 tests).
+- 2026-06-24: `pnpm vitest run apps/server/src/classifier/ai-client.test.ts` passed after Task 8 coverage audit (6 tests).
+- 2026-06-24: `.env.example` updated with provider selection, conditional key guidance, base URL, and timeout variables.
+- 2026-06-24: `pnpm lint` passed after `.env.example` update.
+- 2026-06-24: `cmd /c node_modules\.bin\tsc.cmd --noEmit -p apps/server/tsconfig.json` passed after `.env.example` update.
+- 2026-06-24: `git diff --check` passed after `.env.example` update.
+- 2026-06-24: `pnpm test` rerun blocked by current Windows sandbox: initial run failed before discovery (`spawn EPERM` from Vitest/Vite config loading); temporary runner config plus preload reached test discovery, but Vite test-file transforms still failed because Node `child_process.spawn` is blocked globally, including esbuild service startup. Full suite had passed earlier in this story before the env-sample-only update.
+- 2026-06-24: `pnpm test` passed after rerunning outside the restricted sandbox (39 files, 591 tests).
+
 ### Completion Notes List
 
+- Task 1 complete: `shared/env.ts` now parses `AI_PROVIDER`, `AI_BASE_URL`, and `AI_TIMEOUT_MS`, keeps Gemini as the default provider/model, and applies provider-specific fail-fast validation for API keys, OpenAI-compatible base URL, and accidental Gemini-model reuse with Ollama/OpenAI-compatible providers.
+- Added focused env validation coverage for default Gemini, conditional API key requirements, Ollama no-key operation, OpenAI-compatible required fields, rule-only no-key operation, timeout coercion/defaulting, invalid provider failure, and invalid timeout failure.
+- Task 2 complete: `classifyMessage(text)` remains the public classifier entry, provider-specific Gemini API calls moved into `classifier/providers/gemini.ts`, shared schema validation now runs in `ai-client.ts` over provider raw results, and classifier success/schema-invalid logs include provider/model/latency metadata without raw message text.
+- Task 3 complete: Gemini provider preserves the existing `@google/genai` structured-output request, continues explicit empty-response and JSON parsing behavior, and now passes an SDK-supported abort signal plus throws `Gemini classification timed out after <ms>ms` when `AI_TIMEOUT_MS` expires.
+- Task 4 complete: Ollama provider uses native `fetch` against `/api/chat`, defaults to `http://localhost:11434/api`, sends no API key or authorization header, uses the selected `AI_MODEL`, sends the shared plain prompt, requests non-streaming structured JSON with `temperature: 0`, parses `message.content`, and throws retryable errors for HTTP, invalid JSON, empty content, and timeout failures.
+- Task 5 complete: OpenAI-compatible provider uses native `fetch` against `AI_BASE_URL/chat/completions`, sends bearer auth only for this provider, uses the selected `AI_MODEL`, sends the shared plain prompt, prefers JSON Schema structured output, falls back to JSON object and then prompt-only mode when response format is unsupported, parses `choices[0].message.content`, and throws retryable errors for HTTP, missing content, invalid JSON, and timeout failures without logging tokens or message text.
+- Task 6 complete: Rule-only provider is selected only through `AI_PROVIDER=rule-only`, returns deterministic raw classifier-shaped output for conservative civic keyword matches or ignore otherwise, logs `classifier_rule_only_used`, and still relies on `ai-client.ts` to validate output with `ClassifierOutputSchema`.
+- Task 7 complete: Batch retry ownership remains in `batch-processor.ts`; focused tests now prove timeout and schema-invalid classifier failures retry three times, do not create signals, do not call raw-message delete, do not enter the signal transaction, and write failed batch health while keeping raw messages queued.
+- Task 8 complete: Focused tests cover provider-aware env validation, Gemini structured-output preservation, Ollama local HTTP behavior, OpenAI-compatible bearer/structured-output behavior and fallbacks, rule-only explicit selection, no silent fallback, schema validation through `ai-client.ts`, timeout handling, safe logging, and raw-message retention after provider failures.
+- Task 9 complete: `.env.example` now documents provider selection, conditional API key requirements, provider model guidance, OpenAI-compatible base URL guidance, and per-classification timeout defaults; no broader planning docs required changes.
+
 ### File List
+
+- `.env.example`
+- `apps/server/src/shared/env.ts`
+- `apps/server/src/shared/env.test.ts`
+- `apps/server/src/classifier/ai-client.ts`
+- `apps/server/src/classifier/ai-client.test.ts`
+- `apps/server/src/classifier/batch-processor.test.ts`
+- `apps/server/src/classifier/prompt.ts`
+- `apps/server/src/classifier/providers/gemini.ts`
+- `apps/server/src/classifier/providers/gemini.test.ts`
+- `apps/server/src/classifier/providers/ollama.ts`
+- `apps/server/src/classifier/providers/ollama.test.ts`
+- `apps/server/src/classifier/providers/openai-compatible.ts`
+- `apps/server/src/classifier/providers/openai-compatible.test.ts`
+- `apps/server/src/classifier/providers/rule-only.ts`
+- `apps/server/src/classifier/providers/rule-only.test.ts`
+- `apps/server/src/classifier/providers/types.ts`
+- `_bmad-output/implementation-artifacts/7-1-provider-based-classifier-configuration.md`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml`
+
+### Change Log
+
+- 2026-06-24: Implemented provider-based classifier configuration with Gemini default, Ollama, OpenAI-compatible, and rule-only providers; added focused env/provider/batch tests and updated env sample.
