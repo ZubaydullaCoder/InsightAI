@@ -222,6 +222,12 @@ Developer/operator can use the /ops console to simulate messages, view the live 
 **FRs covered:** FR21a (Ops UI), FR21b (Ops CRUD), FR33 (extended Ops Console view)
 **ARs covered:** AR11, AR20
 
+### Epic 7: AI Provider Flexibility For Phase 1 Validation
+Developer/operator can switch classifier providers through configuration for Phase 1 validation, including Gemini default, local Ollama/Gemma, OpenAI-compatible providers, and explicit rule-only mode, without rewriting classifier business logic or changing Telegram intake, storage, dashboard, Ops UI, or database schema.
+**FRs covered:** FR22, FR23, FR24, FR25
+**NFRs covered:** NFR7, NFR12, NFR14
+**ARs covered:** AR8, AR9, AR15
+
 ---
 
 ## Epic 1: Project Foundation & AI Signal Pipeline
@@ -758,3 +764,32 @@ So that I can verify classifier output quality and pipeline state during HITL va
 **And** `GET /api/ops/raw-messages` returns all pending `raw_messages`: `id`, `text`, `mahallaId`, `telegramTimestamp`, `textSource`
 **And** Health Dashboard panel shows two sections: (1) **Infrastructure** — DB status, scheduler status, AI API status, bot connectivity per mahalla — sourced from `GET /api/ops/system-health`; (2) **Pipeline Diagnostics** — active keyword-gate state, `lastBatchAt`, `queueDepth`, `preFilterDiscardCount`, and `keywordSkipCount` — sourced from `GET /api/ops/batch-status`; both auto-refresh every 10 seconds
 **And** `pnpm lint` and `pnpm test` pass
+
+---
+
+## Epic 7: AI Provider Flexibility For Phase 1 Validation
+
+Developer/operator can switch classifier providers through configuration for Phase 1 validation, including Gemini default, local Ollama/Gemma, OpenAI-compatible providers, and explicit rule-only mode, without rewriting classifier business logic or changing Telegram intake, storage, dashboard, Ops UI, or database schema.
+
+### Story 7.1: Provider-Based Classifier Configuration
+
+As a **developer/operator**,
+I want the AI classifier to use a provider abstraction selected by environment configuration,
+So that Phase 1 can validate classification locally with Ollama/Gemma while preserving existing Gemini behavior as the default.
+
+**Acceptance Criteria:**
+
+**Given** the server starts without an explicit AI provider
+**When** classifier configuration is loaded
+**Then** Gemini remains the default provider and the existing Gemini classifier behavior continues to work
+**And** the classifier supports explicit provider selection for `gemini`, `ollama`, `openai-compatible`, and `rule-only`
+**And** `AI_API_KEY` is required only for providers that need it; local Ollama/Gemma and rule-only mode do not require an API key
+**And** Ollama supports a configurable local base URL and Gemma model name without changing classifier business logic
+**And** OpenAI-compatible providers support configurable base URL, model, and API key
+**And** every provider response is parsed and validated with the existing `ClassifierOutputSchema`; the classifier output schema remains unchanged
+**And** failed, invalid, or timed-out classifications throw into the existing retry flow and keep raw messages in `raw_messages` after retry exhaustion
+**And** explicit timeout handling exists for provider calls
+**And** logs include provider name, model name, latency, schema validation failure, timeout, retry, and fallback events without logging secrets
+**And** invalid provider configuration fails fast on startup
+**And** Telegram intake, dashboard UI, Ops Console UI, database schema, and unrelated modules are not changed
+**And** `pnpm lint`, `pnpm test`, and server TypeScript checks pass; web build/typecheck is only required if web files are touched

@@ -37,14 +37,14 @@ processing, Uzbek NLP, district-scoped multi-user auth, Developer Ops Console.
 ### Technical Constraints & Dependencies (Phase 1)
 
 - grammY (current stable) — `webhookCallback(bot, "express", { secretToken })` for Express integration
-- `@google/genai` SDK — `ai.models.generateContent()` with `responseMimeType: 'application/json'` and `responseJsonSchema`
+- Classifier provider abstraction with Gemini default via `@google/genai`, local Ollama/Gemma over HTTP, OpenAI-compatible HTTP providers, and explicit rule-only mode for deterministic testing
 - Ant Design v6.x with ConfigProvider tokens; no Tailwind
 - `@tanstack/react-virtual` — lane virtualization (>50 cards threshold)
 - Prisma v7.8.0 — PostgreSQL schema management, migrations, BigInt support; requires `@prisma/adapter-pg`
-- Zod v4 — runtime validation; converted to Gemini-compatible JSON Schema via `zod-to-json-schema`
+- Zod v4 — runtime validation; converted to provider-compatible JSON Schema via `zod-to-json-schema` where supported
 - express-session + connect-pg-simple — PostgreSQL-backed session store (no Redis in Phase 1)
 - node-cron v4.x — in-process scheduler (no BullMQ/Redis in Phase 1)
-- AI model: configurable Gemini model via `AI_MODEL` env var (Google AI only in Phase 1)
+- AI classifier provider: configurable via env, with Gemini as the default provider. Phase 1 supports Gemini, local Ollama/Gemma, OpenAI-compatible providers, and explicit rule-only mode for deterministic testing. Provider responses must be parsed and validated through the same `ClassifierOutputSchema`; invalid, failed, or timed-out responses enter the existing retry flow and must not delete raw messages.
 - Filtering: `keyword_gate` is the only active current development/demo-pilot method; `ai_full` may be reconsidered later only by explicit owner decision
 - Keyword registry: centralized PostgreSQL-backed Ops Console registry; manually edited by developer/operator only
 - Pre-filter thresholds and keyword coverage: provisional until real-data validation
@@ -58,7 +58,7 @@ processing, Uzbek NLP, district-scoped multi-user auth, Developer Ops Console.
 5. **Idempotency** — `telegram_update_id` unique constraint; `$transaction([signalCreate, rawDelete])` per message
 6. **Security secrets** — five env-only secrets (DATABASE_URL included); webhook validated via grammY `secretToken` option
 7. **AI output validation** — Zod discriminated union before every write; invalid = retry or log, never silently accepted
-8. **Gemini model selection** — `AI_MODEL` env var selects the Gemini model; Google AI is the only implemented provider in Phase 1
+8. **Classifier provider selection** — `AI_PROVIDER` selects the provider, `AI_MODEL` selects that provider's model, Gemini remains the default, and invalid provider config fails fast at startup
 9. **Filtering isolation** — keyword-gate operation is visible to Ops only; no hokim/staff dashboard control or filtering-mode language
 
 ---
@@ -118,9 +118,9 @@ useful enough for pilot deployment. See Section 16 for the Phase 2 roadmap.
 - `grammy` (current stable) — `webhookCallback(bot, "express", { secretToken })`
 - `node-cron` v4.x — in-process scheduler
 - `argon2` — password hashing
-- `@google/genai` (current stable) — AI classification
+- `@google/genai` (current stable) — Gemini classifier provider
 - `zod` v4.x — runtime validation
-- `zod-to-json-schema` — converts Zod classifier schema to Gemini `responseJsonSchema`
+- `zod-to-json-schema` — converts Zod classifier schema to provider-compatible structured-output schemas where supported
 - `morgan` — HTTP request logging
 - `pino` — structured application logging (pino-pretty for dev)
 
@@ -174,7 +174,8 @@ mahalla-ovozi/
 │   │       │   └── query.ts          ← active keyword registry queries
 │   │       ├── classifier/
 │   │       │   ├── index.ts          ← classifyBatch() public function
-│   │       │   ├── ai-client.ts      ← @google/genai client factory
+│   │       │   ├── ai-client.ts      ← provider-selected classifyMessage() entry point
+│   │       │   ├── providers/        ← Gemini, Ollama, OpenAI-compatible, and rule-only providers
 │   │       │   ├── prompt.ts         ← classification prompt template + few-shot examples
 │   │       │   ├── schema.ts         ← ClassifierOutputSchema (Zod v4) + ClassifierOutput type
 │   │       │   └── batch-processor.ts ← fetches pending raw_messages, calls AI, writes signal_messages
@@ -588,7 +589,7 @@ cron.schedule('0 3 * * *', async () => {
 | Global UI state | React built-ins only | No Zustand/Redux needed at MVP scale |
 | Routing | React Router v6.30.x — 3 routes: `/login`, `/`, `/ops` | Minimal; `/ops` is developer-only |
 | Ops Console access | Explicit `OPS_ENABLED` guard plus local-only or `OPS_SECRET` protection | Prevents accidental exposure when local dev is tunneled for Telegram webhook testing |
-| AI provider | Gemini (configurable model via `AI_MODEL` env) | Only Google AI is implemented; `AI_MODEL` selects the model, not the provider |
+| AI provider | Provider-selected classifier with Gemini default | `AI_PROVIDER` selects provider; `AI_MODEL` selects provider model; local Ollama/Gemma and rule-only support Phase 1 validation without changing classifier business logic |
 
 ---
 
@@ -660,7 +661,7 @@ router.use((req, res, next) => {
 ```
 
 **Secrets (env-only, never logged or committed):**
-`DATABASE_URL`, `BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `AI_API_KEY`, `SESSION_SECRET`, `OPS_SECRET`
+`DATABASE_URL`, `BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `AI_API_KEY` when required by selected provider, `SESSION_SECRET`, `OPS_SECRET`
 
 ---
 
@@ -827,38 +828,44 @@ export const ClassifierOutputSchema = z.discriminatedUnion('decision', [
 export type ClassifierOutput = z.infer<typeof ClassifierOutputSchema>
 ```
 
-### AI Client
+### AI Client Provider Boundary
 
 ```typescript
+// apps/server/src/classifier/providers/types.ts
+export type ClassifierProviderName = 'gemini' | 'ollama' | 'openai-compatible' | 'rule-only'
+
+export type ClassifierProvider = {
+  name: ClassifierProviderName
+  model: string
+  classify(prompt: string, options: { timeoutMs: number }): Promise<unknown>
+}
+
 // apps/server/src/classifier/ai-client.ts
-import { GoogleGenAI } from '@google/genai'
-import { zodToJsonSchema } from 'zod-to-json-schema'
-import { ClassifierOutputSchema } from './schema.ts'
-
-const ai = new GoogleGenAI({ apiKey: env.AI_API_KEY })
-
 export async function classifyMessage(text: string): Promise<ClassifierOutput> {
-  const response = await ai.models.generateContent({
-    model: env.AI_MODEL,  // e.g. 'gemini-2.5-flash' — model is configurable, provider is Google
-    contents: buildPrompt(text),
-    config: {
-      responseMimeType: 'application/json',
-      // Current Gemini JS structured output uses responseJsonSchema.
-      // Validate SDK syntax against official docs/types during implementation.
-      responseJsonSchema: zodToJsonSchema(ClassifierOutputSchema),
-      temperature: 0,     // deterministic output
-    },
-  })
-
-  const rawJson = JSON.parse(response.text ?? '{}')
+  const provider = getClassifierProvider(env)
+  const startedAt = Date.now()
+  const rawJson = await provider.classify(buildPrompt(text), { timeoutMs: env.AI_TIMEOUT_MS })
   const result = ClassifierOutputSchema.safeParse(rawJson)
 
   if (!result.success) {
+    logger.warn(
+      { provider: provider.name, model: provider.model, latencyMs: Date.now() - startedAt, error: result.error.message },
+      'AI output schema invalid',
+    )
     throw new Error(`AI output schema invalid: ${result.error.message}`)
   }
   return result.data
 }
 ```
+
+Provider requirements:
+- Gemini provider preserves the existing `@google/genai` structured-output behavior and remains the default.
+- Ollama provider uses local HTTP, defaults to local base URL configuration, supports Gemma models, and does not require an API key.
+- OpenAI-compatible provider uses configurable base URL plus API key.
+- Rule-only provider is selected explicitly for deterministic local/testing behavior; it is not a silent fallback.
+- Every provider response is parsed and validated through `ClassifierOutputSchema`.
+- Timeout, schema failure, provider name, model name, latency, retry, and fallback events are logged without secrets.
+- Failed, invalid, or timed-out provider calls throw into the existing retry flow and must not delete `raw_messages`.
 
 ### Retry Strategy
 
@@ -1050,8 +1057,11 @@ DATABASE_URL=postgresql://mahalla:devpassword@localhost:5432/mahalla_ovozi  # co
 SESSION_SECRET=change_this_to_a_random_string_in_production
 BOT_TOKEN=                   # from @BotFather
 TELEGRAM_WEBHOOK_SECRET=     # random string; set same in Telegram webhook config
-AI_API_KEY=                  # Google AI API key
-AI_MODEL=gemini-2.5-flash    # configurable Gemini model selection
+AI_PROVIDER=gemini           # gemini | ollama | openai-compatible | rule-only
+AI_API_KEY=                  # required for gemini and openai-compatible; not required for ollama/rule-only
+AI_MODEL=gemini-2.5-flash    # provider model; examples: gemini-2.5-flash, gemma3, gpt-4.1-mini
+AI_BASE_URL=                 # optional; local Ollama or OpenAI-compatible base URL
+AI_TIMEOUT_MS=30000          # per-classification AI timeout
 FILTER_MODE=keyword_gate     # current active filtering method
 OPS_ENABLED=false            # true only during Phase 1 local validation
 OPS_SECRET=                  # optional; required if accessing Ops Console over a tunnel/non-localhost
@@ -1212,7 +1222,7 @@ POST /webhook → grammY → pipeline.ts structural pre-filter
         ↓
   node-cron (every 20 min) → classifyBatch()
         ↓
-  ai-client.ts → @google/genai → ClassifierOutputSchema.safeParse()
+  ai-client.ts → selected classifier provider → ClassifierOutputSchema.safeParse()
         ↓
   signal_messages written | raw_messages deleted | batch_health/filter diagnostics updated
         ↓
@@ -1246,7 +1256,7 @@ All 16 NFRs addressed:
 
 **Critical decisions resolved:**
 1. Drawer scope: `mahalla_id` ✅
-2. AI model: configurable Gemini model via `AI_MODEL` env var; provider is Google AI ✅
+2. AI provider: configurable provider with Gemini default; local Ollama/Gemma, OpenAI-compatible, and explicit rule-only modes are supported for Phase 1 validation
 3. Pre-filter thresholds: provisional; isolated in `pipeline.ts` for easy tuning ✅
 4. Session store: PostgreSQL-backed via `connect-pg-simple` ✅
 5. Ignored message sampling: deferred to Phase 2 (requires processed-state tracking) ✅
@@ -1256,7 +1266,7 @@ Express v4 + grammY `webhookCallback(bot, 'express', { secretToken })` — confi
 Prisma v7.8.0 + `@prisma/adapter-pg` driver adapter — confirmed ✅
 AntD v6.x + React Router v6.30.x + TanStack Query v5 — compatible ✅
 node-cron v4.x + `*/20 * * * *` syntax — confirmed ✅
-`@google/genai` + `responseJsonSchema` + `zod-to-json-schema` — official structured-output pattern verified 2026-06-02 ✅
+Gemini structured output remains supported through `@google/genai`; Ollama and OpenAI-compatible providers use HTTP structured JSON where supported and always validate through `ClassifierOutputSchema`.
 
 ---
 

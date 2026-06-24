@@ -110,3 +110,12 @@ development_status:
   6-4-keyword-registry-crud: done
   6-5-signals-browser-and-system-health-dashboard: done
   epic-6-retrospective: optional
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # EPIC 7: AI Provider Flexibility For Phase 1 Validation
+  # Goal: Configurable classifier providers for Gemini default, local Ollama/Gemma,
+  # OpenAI-compatible providers, and rule-only testing.
+  # ─────────────────────────────────────────────────────────────────────────
+  epic-7: in-progress
+  7-1-provider-based-classifier-configuration: ready-for-dev
+  epic-7-retrospective: optional

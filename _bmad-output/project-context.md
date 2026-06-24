@@ -52,7 +52,7 @@ Use the existing TypeScript/pnpm workspace.
 
 Core stack: Node `^20.19.0 || >=22.12.0`, pnpm `10.34.1`, strict TypeScript, Vitest, ESLint, Prisma `7.8.0`, PostgreSQL.
 
-Backend stack: Express 4.x, grammY, Prisma with `@prisma/adapter-pg`, Zod v4, `@google/genai`, node-cron, `express-session`, argon2, pino/morgan.
+Backend stack: Express 4.x, grammY, Prisma with `@prisma/adapter-pg`, Zod v4, classifier provider abstraction with Gemini default via `@google/genai`, optional local Ollama/OpenAI-compatible HTTP providers, node-cron, `express-session`, argon2, pino/morgan.
 
 Frontend stack: React 18, Vite 8, Ant Design 6, TanStack Query 5, React Router 6. TanStack Virtual is available but deferred until needed.
 
@@ -69,6 +69,8 @@ Discard bot-originated messages with `from.is_bot === true`, and preserve operat
 Do not discard short messages solely by length. Short text can be a valid civic signal.
 
 Validate AI output with the classifier schema before writing signal data. Invalid AI output should be retried or logged, never silently accepted.
+
+Gemini is the default classifier provider, but classifier business logic must remain provider-agnostic. Local Ollama/Gemma and rule-only modes are for Phase 1 validation/testing and must still validate outputs with `ClassifierOutputSchema`.
 
 Use Prisma relations and district-scoped constraints consistently. District isolation is a core security boundary; do not bypass it.
 
