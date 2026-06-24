@@ -106,6 +106,8 @@ so that Phase 1 can validate classification locally with Ollama/Gemma while pres
 
 ## Dev Notes
 
+> **Validation note (2026-06-24):** Story passed VS + AR + ECH review. Dev-note additions applied below: Prompt Adapter Pattern (C1), model fail-fast guard (E1), Gemini timeout pattern (E2). No AC or task changes required.
+
 ### Current State To Change
 
 - `apps/server/src/classifier/ai-client.ts` is currently Gemini-specific. It creates `new GoogleGenAI({ apiKey: env.AI_API_KEY })`, calls `ai.models.generateContent()`, uses `responseMimeType: 'application/json'`, converts `ClassifierOutputSchema` via `zod-to-json-schema`, parses `response.text`, and validates with `ClassifierOutputSchema.safeParse()`. Preserve that behavior behind the `gemini` provider instead of replacing it wholesale.
@@ -153,13 +155,47 @@ type ProviderRawResult = {
   - `AI_BASE_URL` not required
   - `AI_MODEL` may be ignored or logged as `rule-only`
 
+**Fail-fast for accidental Gemini model reuse:** For `ollama` and `openai-compatible`, treat `AI_MODEL === 'gemini-2.5-flash'` (the Gemini default) as a fail-fast condition during env validation — in addition to a missing or empty `AI_MODEL`. This catches copy-paste misconfiguration where the operator forgets to set the local model name.
+
+**OpenAI-compatible `response_format` fallback:** Not all OpenAI-compatible providers support `response_format`. Do NOT fail-fast on missing `response_format` support. Prefer `json_schema` mode → fall back to `json_object` mode → fall back to prompt-only JSON extraction. All three paths must still validate output with `ClassifierOutputSchema`. Treat extraction failure as a retryable classification error.
+
 Do not read provider env values directly from `process.env` inside classifier modules. Use the parsed env/config export from `shared/env.ts` or a small derived classifier config helper.
+
+### Prompt Adapter Pattern
+
+`buildPrompt(text)` in `prompt.ts` currently returns `Content[]` — a Gemini-specific type from `@google/genai`. Providers other than Gemini need a plain string prompt.
+
+**Preferred approach:** Add a `buildPlainPrompt(text: string): string` export to `prompt.ts` that returns the identical instruction text as a single string. Gemini provider uses the existing `buildPrompt()` unchanged; Ollama and OpenAI-compatible providers use `buildPlainPrompt()`. Keep the prompt wording identical in both.
+
+**Alternative (if `prompt.ts` is kept read-only):** In each HTTP provider, extract the text as `buildPrompt(text)[0].parts[0].text` — acceptable but fragile; document the index assumption if used.
+
+`rule-only` must NOT call `buildPrompt()` — it produces deterministic schema-shaped output without invoking any AI or prompt.
 
 ### Timeout Behavior
 
 Implement per-classification timeout around provider calls using `AI_TIMEOUT_MS`. Timeout errors must be ordinary thrown errors so `classifyMessageWithRetry()` handles them exactly like provider/API/schema failures. On timeout after all retries, the raw message must remain in `raw_messages`.
 
-For HTTP providers, use `AbortController` with `fetch`. For Gemini, the current JS SDK exposes an abort signal path in generate-content config; if installed types differ, use a small wrapper that races the SDK call with a timeout and still throws a clear timeout error. Do not hide late provider failures silently if they can be logged safely.
+For HTTP providers, use `AbortController` with `fetch`. For Gemini, pass `{ abortSignal: controller.signal }` in the generate-content config if the installed `@google/genai` types support it. If not, use a `Promise.race` wrapper:
+
+```typescript
+const controller = new AbortController()
+const timer = setTimeout(() => controller.abort(), env.AI_TIMEOUT_MS)
+try {
+  const result = await Promise.race([
+    ai.models.generateContent(params),
+    new Promise<never>((_, reject) =>
+      controller.signal.addEventListener('abort', () =>
+        reject(new Error(`Gemini classification timed out after ${env.AI_TIMEOUT_MS}ms`))
+      )
+    ),
+  ])
+  return result
+} finally {
+  clearTimeout(timer)
+}
+```
+
+The timeout error must be a plain `Error` instance so `classifyMessageWithRetry()` catches it with no special handling. Do not hide late provider failures silently if they can be logged safely.
 
 ### Logging Requirements
 
