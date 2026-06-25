@@ -34,6 +34,11 @@ type ClassifyBatchOptions = {
   sleep?: (ms: number) => Promise<void>
 }
 
+type PersistSignalsResult = {
+  signalsWritten: number
+  lastSignalId: number | null
+}
+
 const zeroIntakeMetrics: IntakeMetrics = {
   pre_filter_discards:        0,
   keyword_matched_count:      0,
@@ -107,16 +112,41 @@ export async function classifyBatch(
         const aiResult = await classifyMessageWithRetry(rawMessage.text, 3, sleepFn)
 
         if (aiResult.decision === 'signal') {
-          const wroteSignal = await persistSignal(rawMessage, aiResult)
-          if (wroteSignal) {
-            signalsWritten += 1
-          }
+          const persistResult = await persistSignals(rawMessage, aiResult, aiResult.categories)
+          signalsWritten += persistResult.signalsWritten
+
+          await writeClassifierEvent({
+            eventType: 'classifier_signal',
+            rawMessage,
+            signalId:  persistResult.lastSignalId,
+            detail:    {
+              decision:      'signal',
+              categories:    aiResult.categories,
+              hokimRelated:  aiResult.hokim_related ?? false,
+              shortLabel:    aiResult.short_label ?? null,
+            },
+          })
         } else {
           await prisma.rawMessage.delete({ where: { id: rawMessage.id } })
           ignoredCount += 1
+          await writeClassifierEvent({
+            eventType: 'classifier_ignore',
+            rawMessage,
+            signalId:  null,
+            detail:    { decision: 'ignore' },
+          })
         }
       } catch (err) {
         failedRawMessageIds.push(rawMessage.id)
+        await writeClassifierEvent({
+          eventType: 'classifier_error',
+          rawMessage,
+          signalId:  null,
+          detail:    {
+            decision: 'error',
+            error:    getErrorMessage(err),
+          },
+        })
         logger.error(
           { districtId, rawMessageId: rawMessage.id, attempts: 3, err },
           'AI classification failed after max retries; message stays in raw_messages',
@@ -225,11 +255,12 @@ export async function aggregateIntakeMetrics(params: {
   }
 }
 
-async function persistSignal(
+async function persistSignals(
   rawMessage: RawMessage,
   aiResult: Extract<ClassifierOutput, { decision: 'signal' }>,
-): Promise<boolean> {
-  const signalRow = {
+  categories: string[],
+): Promise<PersistSignalsResult> {
+  const baseSignalRow = {
     telegram_update_id:  rawMessage.telegram_update_id,
     telegram_message_id: rawMessage.telegram_message_id,
     district_id:         rawMessage.district_id,
@@ -239,12 +270,7 @@ async function persistSignal(
     telegram_timestamp:  rawMessage.telegram_timestamp,
     raw_text:            rawMessage.text,
     text_source:         rawMessage.text_source,
-    category:            aiResult.category,
     hokim_related:       aiResult.hokim_related ?? false,
-    // DN-2 Phase 1 limitation: keyword match data from the pipeline intake is
-    // not available at classification time (raw_messages does not carry it).
-    // TODO: propagate keyword_matched/matched_keyword in a later story (Story 6+)
-    // when shadow_compare keyword-vs-AI analysis is needed by the Ops Console.
     keyword_matched:     false,
     matched_keyword:     null,
     short_label:         aiResult.short_label ?? null,
@@ -252,36 +278,100 @@ async function persistSignal(
   }
 
   try {
-    await prisma.$transaction([
-      prisma.signalMessage.create({ data: signalRow }),
-      prisma.rawMessage.delete({ where: { id: rawMessage.id } }),
-    ])
-    return true
+    return await prisma.$transaction(async (tx) => {
+      // 1. Fetch pre-existing signals for these categories to prevent unique constraint violation
+      const existingSignals = await tx.signalMessage.findMany({
+        where: {
+          telegram_update_id: rawMessage.telegram_update_id,
+          category: { in: categories },
+        },
+        select: { category: true, id: true },
+      })
+
+      const existingCategories = new Set(existingSignals.map((s) => s.category))
+      let lastSignalId: number | null = existingSignals.length > 0 ? existingSignals[existingSignals.length - 1].id : null
+      let signalsWritten = 0
+
+      // 2. Create signals for categories that do not exist yet
+      for (const category of categories) {
+        if (!existingCategories.has(category)) {
+          const created = await tx.signalMessage.create({
+            data: {
+              ...baseSignalRow,
+              category,
+            },
+          })
+          lastSignalId = created.id
+          signalsWritten += 1
+        }
+      }
+
+      // 3. Delete the raw message
+      try {
+        await tx.rawMessage.delete({ where: { id: rawMessage.id } })
+      } catch (err) {
+        if (!isPrismaRecordNotFoundError(err)) {
+          throw err
+        }
+        logger.info(
+          { rawMessageId: rawMessage.id },
+          'Raw message already deleted by concurrent process — idempotent',
+        )
+      }
+
+      return { signalsWritten, lastSignalId }
+    })
   } catch (err) {
     if (isPrismaUniqueConstraintError(err)) {
       logger.info(
         { rawMessageId: rawMessage.id, updateId: rawMessage.telegram_update_id },
-        'Signal already exists; deleting raw_message only',
+        'Signal already exists for categories; deleting raw_message only',
       )
-      // P-5: The raw message may already be deleted by a concurrent batch run.
-      // Swallow P2025 (record not found) to avoid marking this as a failed
-      // message and entering an infinite retry loop on subsequent batches.
       try {
         await prisma.rawMessage.delete({ where: { id: rawMessage.id } })
       } catch (deleteErr) {
-        if (isPrismaRecordNotFoundError(deleteErr)) {
-          logger.info(
-            { rawMessageId: rawMessage.id },
-            'Raw message already deleted by concurrent process — idempotent',
-          )
-        } else {
+        if (!isPrismaRecordNotFoundError(deleteErr)) {
           throw deleteErr
         }
       }
-      return false
+      return { signalsWritten: 0, lastSignalId: null }
     }
-
     throw err
+  }
+}
+
+async function writeClassifierEvent(params: {
+  eventType: 'classifier_signal' | 'classifier_ignore' | 'classifier_error'
+  rawMessage: RawMessage
+  signalId: number | null
+  detail: Record<string, unknown>
+}): Promise<void> {
+  try {
+    await prisma.pipelineEvent.create({
+      data: {
+        event_type:         params.eventType,
+        district_id:        params.rawMessage.district_id,
+        mahalla_id:         params.rawMessage.mahalla_id,
+        telegram_update_id: params.rawMessage.telegram_update_id,
+        raw_message_id:     params.rawMessage.id,
+        signal_id:          params.signalId,
+        detail: {
+          telegramUpdateId:  params.rawMessage.telegram_update_id,
+          telegramMessageId: params.rawMessage.telegram_message_id,
+          rawMessageId:      params.rawMessage.id,
+          signalId:          params.signalId,
+          mahallaId:         params.rawMessage.mahalla_id,
+          textSource:        params.rawMessage.text_source,
+          textSnippet:       params.rawMessage.text.slice(0, 160),
+          ...params.detail,
+        },
+      },
+    })
+  } catch (err) {
+    logger.error(
+      { rawMessageId: params.rawMessage.id, eventType: params.eventType, err },
+      'classifier pipelineEvent.create failed',
+    )
   }
 }
 
@@ -323,11 +413,19 @@ async function writeBatchHealth(params: {
 }
 
 function isPrismaUniqueConstraintError(err: unknown): boolean {
-  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002'
+  return (
+    err instanceof Error &&
+    (err.constructor.name === 'PrismaClientKnownRequestError' || err.name === 'PrismaClientKnownRequestError') &&
+    (err as any).code === 'P2002'
+  )
 }
 
 function isPrismaRecordNotFoundError(err: unknown): boolean {
-  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025'
+  return (
+    err instanceof Error &&
+    (err.constructor.name === 'PrismaClientKnownRequestError' || err.name === 'PrismaClientKnownRequestError') &&
+    (err as any).code === 'P2025'
+  )
 }
 
 function getErrorMessage(err: unknown): string {

@@ -55,7 +55,7 @@ processing, Uzbek NLP, district-scoped multi-user auth, Developer Ops Console.
 2. **Filtering centralization** — structural pre-filtering and keyword matching stay in one intake/classification path
 3. **Uzbek Cyrillic string enforcement** — typed `strings.ts` dictionary + Vitest check
 4. **Health state propagation** — `batch_health` → `/api/health` → 60s poll → amber banner
-5. **Idempotency** — `telegram_update_id` unique constraint; `$transaction([signalCreate, rawDelete])` per message
+5. **Idempotency** — `telegram_update_id` unique in `raw_messages`; composite `(telegram_update_id, category)` unique in `signal_messages` (one row per service category per update); `$transaction([signalCreate, rawDelete])` per category write
 6. **Security secrets** — five env-only secrets (DATABASE_URL included); webhook validated via grammY `secretToken` option
 7. **AI output validation** — Zod discriminated union before every write; invalid = retry or log, never silently accepted
 8. **Classifier provider selection** — `AI_PROVIDER` selects the provider, `AI_MODEL` selects that provider's model, Gemini remains the default, and invalid provider config fails fast at startup

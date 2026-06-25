@@ -18,13 +18,15 @@ const mockEnv = vi.hoisted(() => ({
 vi.mock('../shared/env.js', () => mockEnv)
 
 const prismaMocks = vi.hoisted(() => ({
-  rawMessageFindMany:   vi.fn(),
-  rawMessageDelete:     vi.fn(),
-  signalMessageCreate:  vi.fn(),
-  batchHealthFindFirst: vi.fn(),
-  batchHealthCreate:    vi.fn(),
-  queryRaw:             vi.fn(),
-  transaction:          vi.fn(),
+  rawMessageFindMany:    vi.fn(),
+  rawMessageDelete:      vi.fn(),
+  signalMessageCreate:   vi.fn(),
+  signalMessageFindMany: vi.fn(),
+  batchHealthFindFirst:  vi.fn(),
+  batchHealthCreate:     vi.fn(),
+  pipelineEventCreate:   vi.fn(),
+  queryRaw:              vi.fn(),
+  transaction:           vi.fn(),
 }))
 
 vi.mock('../shared/db.js', () => ({
@@ -34,11 +36,15 @@ vi.mock('../shared/db.js', () => ({
       delete:   prismaMocks.rawMessageDelete,
     },
     signalMessage: {
-      create: prismaMocks.signalMessageCreate,
+      create:   prismaMocks.signalMessageCreate,
+      findMany: prismaMocks.signalMessageFindMany,
     },
     batchHealth: {
       findFirst: prismaMocks.batchHealthFindFirst,
       create:    prismaMocks.batchHealthCreate,
+    },
+    pipelineEvent: {
+      create: prismaMocks.pipelineEventCreate,
     },
     $queryRaw:     prismaMocks.queryRaw,
     $transaction:  prismaMocks.transaction,
@@ -89,11 +95,11 @@ const rawMessage = {
 function signalOutput(overrides: Partial<ClassifierOutput> = {}): ClassifierOutput {
   return {
     decision:      'signal',
-    category:      'water',
+    categories:    ['water'],
     hokim_related: false,
     short_label:   'Water outage',
     ...overrides,
-  }
+  } as ClassifierOutput
 }
 
 describe('classifyBatch', () => {
@@ -102,10 +108,25 @@ describe('classifyBatch', () => {
     mockEnv.env.FILTER_MODE = 'keyword_gate'
     prismaMocks.rawMessageFindMany.mockResolvedValue([rawMessage])
     prismaMocks.rawMessageDelete.mockReturnValue({ operation: 'delete-raw' })
-    prismaMocks.signalMessageCreate.mockReturnValue({ operation: 'create-signal' })
-    prismaMocks.transaction.mockResolvedValue([{ id: 20 }, { id: rawMessage.id }])
+    prismaMocks.signalMessageCreate.mockResolvedValue({ id: 20, operation: 'create-signal' })
+    prismaMocks.signalMessageFindMany.mockResolvedValue([])
+    prismaMocks.transaction.mockImplementation(async (arg) => {
+      if (typeof arg === 'function') {
+        return arg({
+          signalMessage: {
+            findMany: prismaMocks.signalMessageFindMany,
+            create:   prismaMocks.signalMessageCreate,
+          },
+          rawMessage: {
+            delete:   prismaMocks.rawMessageDelete,
+          },
+        })
+      }
+      return [{ id: 20 }, { id: rawMessage.id }]
+    })
     prismaMocks.batchHealthFindFirst.mockResolvedValue(null)
     prismaMocks.batchHealthCreate.mockResolvedValue({ id: 1 })
+    prismaMocks.pipelineEventCreate.mockResolvedValue({ id: 30 })
     prismaMocks.queryRaw.mockResolvedValue([])
   })
 
@@ -133,10 +154,24 @@ describe('classifyBatch', () => {
         short_label:         'Water outage',
       }),
     })
-    expect(prismaMocks.transaction).toHaveBeenCalledWith([
-      { operation: 'create-signal' },
-      { operation: 'delete-raw' },
-    ])
+    expect(prismaMocks.transaction).toHaveBeenCalledWith(expect.any(Function))
+    expect(prismaMocks.pipelineEventCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        event_type:         'classifier_signal',
+        district_id:        rawMessage.district_id,
+        mahalla_id:         rawMessage.mahalla_id,
+        telegram_update_id: rawMessage.telegram_update_id,
+        raw_message_id:     rawMessage.id,
+        signal_id:          20,
+        detail:             expect.objectContaining({
+          decision:    'signal',
+          categories:  ['water'],
+          rawMessageId: rawMessage.id,
+          signalId:    20,
+          textSnippet: rawMessage.text,
+        }),
+      }),
+    })
   })
 
   it('deletes ignored messages without writing a signal', async () => {
@@ -147,17 +182,32 @@ describe('classifyBatch', () => {
     expect(result.ignored_count).toBe(1)
     expect(prismaMocks.signalMessageCreate).not.toHaveBeenCalled()
     expect(prismaMocks.rawMessageDelete).toHaveBeenCalledWith({ where: { id: rawMessage.id } })
+    expect(prismaMocks.pipelineEventCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        event_type:         'classifier_ignore',
+        district_id:        rawMessage.district_id,
+        telegram_update_id: rawMessage.telegram_update_id,
+        raw_message_id:     rawMessage.id,
+        signal_id:          null,
+        detail:             expect.objectContaining({
+          decision:    'ignore',
+          rawMessageId: rawMessage.id,
+          signalId:    null,
+          textSnippet: rawMessage.text,
+        }),
+      }),
+    })
   })
 
   it('retries failed AI classifications before succeeding', async () => {
     aiMocks.classifyMessage
       .mockRejectedValueOnce(new Error('invalid json'))
       .mockRejectedValueOnce(new Error('invalid json'))
-      .mockResolvedValue(signalOutput({ category: 'gas' }))
+      .mockResolvedValue(signalOutput({ categories: ['gas'] }))
 
     const result = await classifyMessageWithRetry('gaz yoq', 3, () => Promise.resolve())
 
-    expect(result).toEqual(expect.objectContaining({ decision: 'signal', category: 'gas' }))
+    expect(result).toEqual(expect.objectContaining({ decision: 'signal', categories: ['gas'] }))
     expect(aiMocks.classifyMessage).toHaveBeenCalledTimes(3)
   })
 
@@ -169,6 +219,17 @@ describe('classifyBatch', () => {
     expect(result.status).toBe('failed')
     expect(result.error_message).toContain('1 message(s) failed')
     expect(prismaMocks.rawMessageDelete).not.toHaveBeenCalled()
+    expect(prismaMocks.pipelineEventCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        event_type:     'classifier_error',
+        raw_message_id: rawMessage.id,
+        signal_id:      null,
+        detail:         expect.objectContaining({
+          decision: 'error',
+          error:    expect.stringContaining('invalid output'),
+        }),
+      }),
+    })
     expect(prismaMocks.batchHealthCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         status:        'failed',

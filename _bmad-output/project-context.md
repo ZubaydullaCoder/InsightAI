@@ -80,7 +80,7 @@ Use env-only secrets. Do not hardcode secrets, tokens, database URLs, webhook se
 
 Main tables: `districts`, `mahallas`, `users`, `raw_messages`, `signal_messages`, `keywords`, `batch_health`, `pipeline_events`.
 
-`telegram_update_id` is unique for raw and signal messages and supports idempotency.
+`telegram_update_id` is unique in `raw_messages`. In `signal_messages` the uniqueness constraint is composite `(telegram_update_id, category)` — one row per service category per source Telegram message — supporting multi-category signals from a single update.
 
 `raw_messages` stores pending retained intake messages. `signal_messages` stores classified civic signals.
 

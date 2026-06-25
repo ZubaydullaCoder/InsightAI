@@ -80,7 +80,7 @@ model RawMessage {
 
 model SignalMessage {
   id                  Int      @id @default(autoincrement())
-  telegram_update_id  Int      @unique
+  telegram_update_id  Int
   telegram_message_id Int
   district_id         Int
   mahalla_id          Int
@@ -106,6 +106,7 @@ model SignalMessage {
   @@index([created_at])
   @@index([hokim_related])
   @@index([keyword_matched])
+  @@unique([telegram_update_id, category])
   @@map("signal_messages")
 }
 

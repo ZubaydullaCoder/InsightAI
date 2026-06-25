@@ -84,6 +84,42 @@ const KNOWN_EVENTS = [
   },
 ]
 
+const CLASSIFIER_EVENTS = [
+  {
+    id:               4,
+    eventType:        'classifier_signal',
+    districtId:       1,
+    mahallaId:        2,
+    telegramUpdateId: 104,
+    rawMessageId:     13,
+    signalId:         6,
+    detail:           { textSnippet: "Gaz yo'q", decision: 'signal', category: 'gas' },
+    createdAt:        '2026-06-22T09:45:00.000Z',
+  },
+  {
+    id:               5,
+    eventType:        'classifier_ignore',
+    districtId:       1,
+    mahallaId:        2,
+    telegramUpdateId: 105,
+    rawMessageId:     14,
+    signalId:         null,
+    detail:           { textSnippet: 'Gaz plita sotib olamiz', decision: 'ignore' },
+    createdAt:        '2026-06-22T09:40:00.000Z',
+  },
+  {
+    id:               6,
+    eventType:        'classifier_error',
+    districtId:       1,
+    mahallaId:        2,
+    telegramUpdateId: 106,
+    rawMessageId:     15,
+    signalId:         null,
+    detail:           { textSnippet: "Suv yo'q", decision: 'error', error: 'AI timeout' },
+    createdAt:        '2026-06-22T09:35:00.000Z',
+  },
+]
+
 const UNKNOWN_EVENT = {
   id:               99,
   eventType:        'some_future_event_type',
@@ -278,6 +314,15 @@ describe('PipelineLogPanel — known event types', () => {
     renderPanel()
     // 2026-06-22T10:00:00.000Z → 10:00:00 in UTC
     expect(screen.getByText('10:00:00')).toBeInTheDocument()
+  })
+
+  it('renders classifier decision event tags and snippets', () => {
+    mockUsePipelineEvents.mockReturnValue(createQueryResult({ data: CLASSIFIER_EVENTS }))
+    renderPanel()
+    expect(screen.getByText('CLASSIFIER SIGNAL')).toBeInTheDocument()
+    expect(screen.getByText('CLASSIFIER IGNORE')).toBeInTheDocument()
+    expect(screen.getByText('CLASSIFIER ERROR')).toBeInTheDocument()
+    expect(screen.getByText(/Gaz plita sotib olamiz/)).toBeInTheDocument()
   })
 })
 
