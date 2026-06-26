@@ -31,7 +31,7 @@ The core decision test:
 Analyze the message contextually and ask yourself: "Does this message convey a complaint, concern, query about status/schedule, report of an issue, or expression of praise/gratitude/acknowledgement regarding a public utility service (water, electricity, gas, waste)?"
 
 - If YES (or strongly implied) → signal
-- If NO, or if the message is unrelated to these public services (such as general greetings, marketplace transactions, requesting/sharing contact details or identity of staff/inspectors with no active service issue context, or general informational announcements and administrative instructions inviting reports but containing no active issue) → ignore
+- If NO, or if the message is unrelated to these public services (such as general greetings, marketplace transactions, requesting/sharing contact details or identity of staff/inspectors with no active service issue context, general informational announcements/administrative instructions, or commercial/private advertisements offering services like repair, installation, plumbing, and handyman tasks with no active civic issue) → ignore
 
 Greeting/chatter mix rule: Messages often start with greetings, small talk, or polite phrases (e.g. "Assalomu alaykum", "Yaxshimisizlar", "yaxshi dam oldilarmi") followed by a real utility issue, concern, or query (e.g. "svet o'chdimi yana", "suv bormi"). You MUST classify such messages as a "signal" if they contain a utility issue/query, ignoring the greetings. Do not let the greeting/social chatter at the start override the actual utility complaint or query.
 
@@ -41,7 +41,7 @@ This test covers all cases:
 - A frustrated community poll ("184 odam onlayn, bor yoki yo'q deyish qiyin emas") → implies concern about service status → signal
 - An expression of thanks/praise ("Svetni tuzatganlarga rahmat, baraka topinglar") → praise/gratitude related to utility service → signal
 - A contact/number request, identity query, or contact details sharing with no mentioned problem (e.g. "gaz nazoratchisi kim", "suvchining raqamini bering", "mana gazchi") → no service issue or praise context, pure contact info or staff identity query → ignore
-- A marketplace post ("gaz plita sotiladi") → commercial intent, no service relationship → ignore
+- A marketplace post or service advertisement ("gaz plita sotiladi", "suv o'lchagich o'rnatamiz", "elektr/svet ustasi kerak bo'lsa yozing") → commercial product/service offer, no active civic complaint/query → ignore
 - General announcements, community instructions, administrative alerts, or invitations to report problems with no actual problem/praise/query mentioned (e.g. "водаканални группага кушдик сувдан муаммо бўлса ёзинглар") → no active issue or praise, purely procedural/instructional → ignore
 - Social chat, greetings, jokes with no utility service issues or queries → no service relationship → ignore
 
@@ -71,6 +71,7 @@ Message: "Assalomu alaykum Tursunovga musor moshina kelarmikan kecha kelmagan" -
 Message: "Мирсайт. Баракани олмадику райис бобо бизгаям кирсин Мусир кучада ётипти" -> { "decision": "signal", "categories": ["waste"], "hokim_related": true, "short_label": "Complaint about garbage on the street with local leader reference" }
 Message: "Svetni tuzatganlarga rahmat, baraka topinglar" -> { "decision": "signal", "categories": ["electricity"], "hokim_related": false, "short_label": "Praise for power restoration" }
 Message: "АССАЛОМ АЛЕЙКУМ МАХАЛЛАДОШЛАР ЯХШИ ДАМ ОЛДИЛАРМИ ХАММА ДА СВЕТ УЧГАНМИ ЯНА" -> { "decision": "signal", "categories": ["electricity"], "hokim_related": false, "short_label": "Asking if power is out for everyone" }
+Message: "suv o'lchagich o'rnatamiz kimga kerak" -> { "decision": "ignore" }
 Message: "Махалладошлар вилоят водаканални группамизга кушдик сувдан канака муаммо булса группага ёзинглар улар куриб укиб туради." -> { "decision": "ignore" }
 Message: "Ассаламу алайкум махалладошлар махалламиз газ назоратчиси ким" -> { "decision": "ignore" }
 Message: "Assalomu alaykum gaz nazoratchisining nomerini bervoringsizlar iltimos" -> { "decision": "ignore" }
