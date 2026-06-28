@@ -89,7 +89,7 @@ The same `Signal` object is referenced (not copied) in both lanes. The `<SignalC
 **Anatomy:**
 ```
 <SignalCard>
-  ├── left border (4px, categoryColor)           ← always the SERVICE category color
+  ├── full border (1.5px, categoryColor when active)
   ├── card-meta row
   │    ├── sender name (13px/600)
   │    └── timestamp (11px/400, right-aligned)
@@ -101,13 +101,13 @@ The same `Signal` object is referenced (not copied) in both lanes. The `<SignalC
 ```
 
 **Color rule when rendered inside the Ҳокимга тегишли lane:**
-The `categoryColor` prop passed to `<SignalCard>` is **always the signal's original service category color**, even when the card is rendered inside the Hokim lane. The Hokim lane has no separate override color for card borders.
+The `categoryColor` prop passed to `<SignalCard>` is **always the signal's original service category color**, even when the card is rendered inside the Hokim lane. The Hokim lane has no separate override color for card borders or active rings.
 
 | Signal | Rendered in | `categoryColor` passed |
 |---|---|---|
-| `category=gaz, hokim_related=true` | Hokim lane | Gas teal `#1A7060` |
-| `category=gaz, hokim_related=true` | Газ lane | Gas teal `#1A7060` |
-| `category=suv, hokim_related=false` | Сув lane | Water blue `#1D6FA4` |
+| `category=gaz, hokim_related=true` | Hokim lane | Gas purple `#7C3AED` |
+| `category=gaz, hokim_related=true` | Газ lane | Gas purple `#7C3AED` |
+| `category=suv, hokim_related=false` | Сув lane | Water blue `#2563EB` |
 
 Rationale: the hokim must instantly know *which service* a Hokim-lane card concerns without opening the drawer. Color is the fastest signal — it must never be overridden by lane membership.
 
@@ -127,9 +127,9 @@ interface SignalCardProps {
 
 | State | Visual Change |
 |---|---|
-| Default | `border-left: 4px solid categoryColor`, `background: #FFFFFF`, `box-shadow: 0 1px 3px rgba(0,0,0,0.06)` |
-| Hover | `box-shadow: 0 2px 8px rgba(0,0,0,0.10)`, `cursor: pointer` |
-| Active | `background: categoryColor at 5% opacity`, `box-shadow: 0 2px 10px rgba(0,0,0,0.12)` |
+| Default | `border: 1.5px solid #E2E8F0`, `background: #FFFFFF`, `box-shadow: 0 1px 3px rgba(0,0,0,0.06)` |
+| Hover | slight lift, `box-shadow: 0 4px 12px rgba(0,0,0,0.10)`, `cursor: pointer` |
+| Active | `border: 1.5px solid categoryColor`, `background: categoryColor at 5% opacity`, `box-shadow: 0 0 0 2px categoryColor at 12% opacity` |
 | Skeleton | Replaced by `<Skeleton active paragraph={{ rows: 3 }} />` |
 
 **Accessibility:**
@@ -151,7 +151,7 @@ Signal cards rendered **inside the context drawer** follow additional constraint
 
 - **No action menus.** Drawer cards must not render any action trigger (three-dot menus, context menus, buttons, or links). Mahalla Ovozi is a passive monitoring tool — there are no actions a user can take on a signal. Any interactive affordance on a drawer card is a false signal.
 - **No pagination footer.** The drawer has no "See All" or "Load More" button. The drawer scrolls internally. All context signals within the active time range are fetched in a single API call and rendered in a continuous scrollable list.
-- **No "selected" label badge.** The anchor signal's active state is communicated solely by its highlight (left border accent + category tint background). No additional label, badge, or checkmark is added.
+- **No "selected" label badge.** The anchor signal's active state is communicated solely by its highlight (category border/ring + category tint background). No additional label, badge, or checkmark is added.
 - **Drawer card text clamp:** Full raw message text is shown inside the drawer — no 3-line clamp. The drawer is the reading surface; the lane is the scanning surface.
 
 ## Component Implementation Strategy

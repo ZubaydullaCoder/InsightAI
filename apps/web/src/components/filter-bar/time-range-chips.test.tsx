@@ -43,24 +43,24 @@ describe('TimeRangeChips', () => {
   })
 
   describe('active chip styling', () => {
-    it('active chip has #EEF0FD background', () => {
+    it('active chip has aria-pressed=true', () => {
       renderChips('today')
       const activeButton = screen.getByRole('button', { name: 'Бугун' })
-      expect(activeButton).toHaveStyle({ background: '#EEF0FD' })
+      expect(activeButton).toHaveAttribute('aria-pressed', 'true')
     })
 
-    it('non-active chips do not have #EEF0FD background', () => {
+    it('non-active chips have aria-pressed=false', () => {
       renderChips('today')
       const inactiveButton = screen.getByRole('button', { name: '1 соат' })
-      expect(inactiveButton).not.toHaveStyle({ background: '#EEF0FD' })
+      expect(inactiveButton).toHaveAttribute('aria-pressed', 'false')
     })
 
     it('switches active styling when a different preset is active', () => {
       renderChips('1h')
       const activeButton = screen.getByRole('button', { name: '1 соат' })
       const inactiveButton = screen.getByRole('button', { name: 'Бугун' })
-      expect(activeButton).toHaveStyle({ background: '#EEF0FD' })
-      expect(inactiveButton).not.toHaveStyle({ background: '#EEF0FD' })
+      expect(activeButton).toHaveAttribute('aria-pressed', 'true')
+      expect(inactiveButton).toHaveAttribute('aria-pressed', 'false')
     })
   })
 

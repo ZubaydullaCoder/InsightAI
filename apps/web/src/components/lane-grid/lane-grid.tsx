@@ -21,9 +21,8 @@ export interface LaneGridProps {
 export function LaneGrid({ signals, activeSignalId, onCardClick, isKeywordSearch, isDrawerOpen }: LaneGridProps) {
   return (
     <div
-      className="lane-grid"
+      className="lane-board"
       style={{
-        display: 'flex',
         height: '100%',
         overflow: 'hidden',
       }}

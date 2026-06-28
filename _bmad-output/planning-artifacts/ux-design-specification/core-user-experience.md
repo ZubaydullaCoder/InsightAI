@@ -50,7 +50,7 @@ The drawer renders corroborating signals in **ascending chronological order** (o
 **On drawer open:**
 1. The drawer body shows a skeleton shimmer (3–4 ghost rows) while the context API call resolves.
 2. When content loads, the list scrolls so the **anchor signal is vertically centered** in the drawer body — not pinned to the top.
-3. The anchor signal receives the active highlight state (left border accent + category tint background). No separate label or badge is added.
+3. The anchor signal receives the active highlight state (category border/ring + category tint background). No separate label or badge is added.
 
 **Fetch strategy:** The API returns up to N signals within the active time range, ordered ascending by timestamp. The frontend identifies the anchor by `signal.id` and uses its index in the sorted list to center the scroll position on render.
 
@@ -72,7 +72,7 @@ When the drawer is already open and the user clicks a different signal card in a
 
 **Persistent Visual Anchoring:**
 The active signal card receives:
-- A 3px solid left-border accent in the category's color
+- A category-colored active border/ring
 - A very subtle category-tinted background fill (~5% opacity)
 
 This state persists until the drawer is closed, giving the user a clear visual anchor even while interacting with other lanes.
@@ -117,13 +117,13 @@ Each lane independently handles the absence of signals. When a lane has zero res
 ## Experience Principles
 
 **1. Glanceability Above All**
-Content is structured for rapid visual triage. Lane signal counts, category-color left-border accents, and timestamp + sender lines must allow a busy user to assess district health in under 60 seconds.
+Content is structured for rapid visual triage. Lane signal counts, category icon chips, active card accents, and timestamp + sender lines must allow a busy user to assess district health in under 60 seconds.
 
 **2. Context Without Disruption**
 Detail inspection must never disorient the user. The drawer slides in as an overlay, keeping all five lanes visible and independently scrollable behind it.
 
 **3. Telegram-Informed, Dashboard-First**
-We borrow from Telegram: trust in message authenticity, chronological ordering, and sender+timestamp anchoring. We do not copy: chat bubbles, alternating left/right layout, or dark-mode neon aesthetics. Signal cards are clean horizontal rows with category-colored left-border accents — optimized for top-to-bottom scanning within a fixed-width column.
+We borrow from Telegram: trust in message authenticity, chronological ordering, and sender+timestamp anchoring. We do not copy: chat bubbles, alternating left/right layout, or dark-mode neon aesthetics. Signal cards are clean horizontal rows with category-colored active accents — optimized for top-to-bottom scanning within a fixed-width column.
 
 **4. Zero Ambiguous States**
 Every element must communicate its interactivity clearly through visual design. No element that looks interactive may be inert; no element that is inert may look clickable.

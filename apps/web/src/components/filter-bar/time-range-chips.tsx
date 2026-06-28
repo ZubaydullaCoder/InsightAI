@@ -1,5 +1,4 @@
 // apps/web/src/components/filter-bar/time-range-chips.tsx
-import { theme } from 'antd'
 import { strings } from '../../strings.ts'
 import type { TimeRangePreset } from '../../hooks/use-filters.ts'
 
@@ -12,44 +11,28 @@ const CHIP_DEFS: { key: TimeRangePreset; label: string }[] = [
   { key: '7d',        label: strings.filterBar.preset7d },
 ]
 
-// Active chip tint: 5% opacity of colorPrimary (#4F46A8) — fixed design token per AC-3
-const ACTIVE_BG = '#EEF0FD'
-
 export interface TimeRangeChipsProps {
   activePreset: TimeRangePreset
   onSelect: (preset: TimeRangePreset) => void
 }
 
+// Grouped pill container matching reference .time-pills design.
+// Styles live in index.css (.time-pills, .time-pill, .time-pill.active)
+// to avoid per-render style object creation and to allow CSS :hover to work cleanly.
 export function TimeRangeChips({ activePreset, onSelect }: TimeRangeChipsProps) {
-  const { token } = theme.useToken()
-
   return (
-    <div style={{ display: 'flex', gap: 4 }}>
-      {CHIP_DEFS.map(({ key, label }) => {
-        const isActive = activePreset === key
-        return (
-          <button
-            key={key}
-            type="button"
-            onClick={() => onSelect(key)}
-            style={{
-              padding: '4px 10px',
-              border: `1px solid ${isActive ? token.colorPrimary : token.colorBorder}`,
-              borderRadius: token.borderRadius,
-              background: isActive ? ACTIVE_BG : token.colorBgContainer,
-              color: isActive ? token.colorPrimary : token.colorText,
-              fontSize: 13,
-              fontWeight: isActive ? 500 : 400,
-              cursor: 'pointer',
-              fontFamily: token.fontFamily,
-              lineHeight: '20px',
-              transition: 'background 150ms, border-color 150ms',
-            }}
-          >
-            {label}
-          </button>
-        )
-      })}
+    <div className="time-pills" role="group" aria-label={strings.filterBar.timeRangeGroupLabel}>
+      {CHIP_DEFS.map(({ key, label }) => (
+        <button
+          key={key}
+          type="button"
+          className={`time-pill${activePreset === key ? ' active' : ''}`}
+          onClick={() => onSelect(key)}
+          aria-pressed={activePreset === key}
+        >
+          {label}
+        </button>
+      ))}
     </div>
   )
 }

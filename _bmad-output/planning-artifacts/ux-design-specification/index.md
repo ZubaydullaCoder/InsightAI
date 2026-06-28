@@ -41,7 +41,7 @@
   - [Visual Design Foundation](./visual-design-foundation.md)
     - [Color System](./visual-design-foundation.md#color-system)
       - [Base Palette (AntD ConfigProvider tokens)](./visual-design-foundation.md#base-palette-antd-configprovider-tokens)
-      - [Category Color Tokens (Left-border accents + count badge colors)](./visual-design-foundation.md#category-color-tokens-left-border-accents-count-badge-colors)
+      - [Category Color Tokens (Accent border + icon chip + count badge)](./visual-design-foundation.md#category-color-tokens-accent-border--icon-chip--count-badge)
       - [Severity Ladder (Status indicators only)](./visual-design-foundation.md#severity-ladder-status-indicators-only)
     - [Typography System](./visual-design-foundation.md#typography-system)
       - [Type Scale](./visual-design-foundation.md#type-scale)

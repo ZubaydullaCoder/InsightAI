@@ -43,7 +43,7 @@ export function DateRangePicker({ value, onRangeChange }: DateRangePickerProps) 
       disabledDate={handleDisabledDate}
       format="YYYY-MM-DD"
       allowClear
-      style={{ width: 220 }}
+      className="filter-date-range"
     />
   )
 }

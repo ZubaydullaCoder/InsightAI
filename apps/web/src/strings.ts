@@ -67,6 +67,7 @@ export const strings = {
     presetToday:     'Бугун',
     presetYesterday: 'Кеча',
     preset7d:        '7 кун',
+    timeRangeGroupLabel: 'Вақт оралиғи',
     allMahallas:     'Барча маҳаллалар',
     searchPlaceholder: 'Қидириш...',
   },

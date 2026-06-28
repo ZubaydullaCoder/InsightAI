@@ -34,7 +34,7 @@ The secondary emotional goal is **Confident Trust**. The hokim must believe the 
 ## Design Implications
 
 **Calm Authority → Restrained Color Palette**
-The UI must avoid high-saturation alarm colors in primary UI chrome. Category colors are used as accents (left borders, count badges) not as dominant fills. The overall background is near-white or very light warm gray, not clinical stark white.
+The UI must avoid high-saturation alarm colors in primary UI chrome. Category colors are used as accents (icon chips, active borders/rings, count badges) not as dominant fills. The overall background is a cool-slate board surface with white content containers.
 
 **Confident Trust → Raw Text Always Visible**
 Signal cards must always show the raw Uzbek/Russian message snippet — never replace it with only the AI-generated short label. The short label is a complement to the raw text, not a substitute. This design rule is non-negotiable for trust.
@@ -64,4 +64,3 @@ Emotional trust in a tool is built through repetition and consistency. The layou
 
 **4. Quiet Delight over Showmanship**
 Micro-interactions (drawer slide, skeleton shimmer, card highlight transition) should add polish and smoothness without drawing attention to themselves. The goal is that users feel the UI is "responsive" and "smooth" without consciously noticing the animations. If an animation is noticed, it is too prominent.
-

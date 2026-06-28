@@ -12,14 +12,14 @@ Ant Design v6 is chosen as the component foundation for Mahalla Ovozi. It provid
 - **Covers all required MVP components out-of-the-box:** Drawer, Card, Badge (lane signal counts), Skeleton, Alert (delay banner), Select, DatePicker, Input.Search — all with full TypeScript typings.
 - **Design token theming without external CSS conflicts:** AntD v6's ConfigProvider token system allows full palette, typography, and border-radius overrides at the theme root — no Tailwind, no class conflicts, no specificity battles.
 - **Uzbek Cyrillic rendering:** AntD is designed for multi-script environments (Chinese, Japanese, Korean) and renders Uzbek Cyrillic cleanly with any specified `fontFamily` token.
-- **Solo-developer efficiency:** A single engineer can build and ship the full MVP dashboard using standard AntD primitives, reserving custom CSS only for the five-lane grid layout and category-color left-border accents.
+- **Solo-developer efficiency:** A single engineer can build and ship the full MVP dashboard using standard AntD primitives, reserving custom CSS only for the five-lane board layout, category icon chips, and category active-state accents.
 
 ## Implementation Approach
 
 - **Theme Root:** A single `<ConfigProvider theme={mahallaTtheme}>` wrapper at the app root applies all token overrides globally.
 - **Custom-built components (2 only):**
   1. `<LaneColumn>` — the five-lane horizontal grid container with independent virtual scroll.
-  2. `<SignalCard>` — the individual signal card with category-colored left-border accent (built on AntD `Card` with custom token overrides).
+  2. `<SignalCard>` — the individual signal card with category-colored active border/ring (built on simple semantic markup with AntD token values).
 - **Standard AntD components used as-is:**
   - `Drawer` → Context drawer overlay
   - `Tag` → Short label chip (e.g. `short_label` from AI output, if shown)
@@ -35,17 +35,22 @@ The AntD theme token overrides establish our specific design language:
 
 | Token | Value | Purpose |
 |---|---|---|
-| `colorPrimary` | Neutral indigo (finalized Step 8) | Primary interactive elements |
-| `colorBgContainer` | `#FAFAF9` (warm off-white) | Dashboard background — not clinical white |
+| `colorPrimary` | `#2563EB` reference blue | Primary interactive elements |
+| `colorBgLayout` | `#F1F5F9` cool slate | App-level board background |
+| `colorBgContainer` | `#FFFFFF` | Lane, drawer, and control surfaces |
 | `fontFamily` | `'Inter', 'Outfit', sans-serif` | Typography baseline for Uzbek Cyrillic readability |
-| `borderRadius` | `8px` | Consistent component rounding |
-| `colorBorder` | `#E5E7EB` | Subtle structural borders |
+| `borderRadius` | `10px` | Consistent component rounding |
+| `colorBorder` | `#E2E8F0` | Subtle structural borders |
 
-**Category color tokens** (applied as left-border accents and count badge colors — exact hex values finalized in Step 8):
+**Category color tokens** (applied as full-border active accents, icon chips, and count badge colors):
 
 | Category | Token Name | Color Direction |
 |---|---|---|
-| *Ҳокимга тегишли* | `categoryHokim` | Deep burgundy / maroon |
+| *Ҳокимга тегишли* | `categoryHokim` | Purple-violet `#7C3AED` |
+| *Сув* | `categorySuv` | Blue `#2563EB` |
+| *Электр* | `categoryElektr` | Amber `#F59E0B` |
+| *Газ* | `categoryGaz` | Purple `#7C3AED` |
+| *Чиқинди* | `categoryChiqindi` | Green `#16A34A` |
 | *Сув* | `categorySuv` | Sky blue |
 | *Электр* | `categoryElektr` | Amber / gold |
 | *Газ* | `categoryGaz` | Slate teal |

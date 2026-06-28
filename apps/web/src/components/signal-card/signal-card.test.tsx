@@ -157,11 +157,19 @@ describe('SignalCard', () => {
     expect(onClick).toHaveBeenCalledWith(baseSignal)
   })
 
-  it('renders the category color as the left border', () => {
+  it('renders the category color as the full border when active', () => {
+    renderCard({ isActive: true })
+    const card = getSignalCard()
+    expect(card).toHaveStyle({
+      border: '1.5px solid #1A7060',
+    })
+  })
+
+  it('renders a light gray border when inactive', () => {
     renderCard()
     const card = getSignalCard()
     expect(card).toHaveStyle({
-      borderLeft: '4px solid #1A7060',
+      border: '1.5px solid #E2E8F0',
     })
   })
 

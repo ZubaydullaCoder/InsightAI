@@ -43,7 +43,7 @@ The core experience uses **established patterns combined in a novel context**. N
 |---|---|---|
 | Kanban column with cards | Trello, Linear | Chronological monitoring feed, not task management |
 | Right-side overlay drawer | Linear, Figma | Evidence aggregation from a civic AI data pipeline |
-| Category-colored left-border accent | Analytics dashboards | Public utility classification in Uzbek Cyrillic |
+| Category-colored active border/ring accent | Analytics dashboards | Public utility classification in Uzbek Cyrillic |
 | Skeleton shimmer loading state | Modern SaaS | 20-minute AI batch pipeline with 60s polling cycle |
 
 ## Experience Mechanics
@@ -57,7 +57,7 @@ The core experience uses **established patterns combined in a novel context**. N
 - User visually scans lanes top-to-bottom. Count badges on lane headers draw attention to active lanes.
 - User clicks a `<SignalCard>` in any lane.
 - The context drawer slides in from the right edge (CSS transition: 250ms ease-out).
-- The clicked card receives an immediate active highlight (left border 4px solid + background tint).
+- The clicked card receives an immediate active highlight (category border/ring + background tint).
 
 **Feedback:**
 - Drawer header breadcrumb immediately shows: `[Lane] · [Mahalla] · [Timestamp]`.

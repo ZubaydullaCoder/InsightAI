@@ -52,10 +52,10 @@ Accepted MVP limitations remain: no mobile layout, no high-contrast OS mode supp
 
 | Pair | Ratio | AA |
 |---|---|---|
-| `#1A1714` text on `#FAFAF9` | 18.2:1 | ✅ |
-| `#6B6560` secondary on `#FAFAF9` | 5.9:1 | ✅ |
-| `#4F46A8` primary on `#FFFFFF` | 7.2:1 | ✅ |
-| `#D97706` delay accent on `#FFFBEB` | 3.1:1 | ✅ (large text) |
+| `#1E293B` text on `#FFFFFF` | AA | ✅ |
+| `#64748B` secondary on `#FFFFFF` | AA | ✅ |
+| `#2563EB` primary on `#FFFFFF` | AA | ✅ |
+| `#F59E0B` warning accent on `#FFFBEB` | AA for non-text/background use; verify text use separately | ✅ |
 
 ### Keyboard Navigation
 
@@ -96,6 +96,7 @@ Not applicable for MVP (desktop-only, mouse input). If tablet support is added i
 - Chrome DevTools device emulation at 1024px, 1280px, 1440px, 1920px
 - Real-device test on the hokim’s actual workstation browser (Chrome on Windows — confirm at pilot kickoff)
 - Verify lane column min-width enforcement prevents horizontal overflow at 1024px
+- Verify the header filter row at 1024px: time chips, date picker, keyword search, mahalla select, and logout must not overlap; controls may use condensed widths but must remain visible.
 
 **Accessibility testing:**
 - Automated: `axe-core` via `@axe-core/react` in development mode (console warnings)

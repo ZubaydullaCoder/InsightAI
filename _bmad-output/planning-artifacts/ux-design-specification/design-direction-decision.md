@@ -4,6 +4,8 @@
 
 Three interactive design directions were generated and evaluated during UX design. The source of truth for implementation and Architecture handoff is this sharded UX specification directory.
 
+> **Historical note (updated 2026-06-28):** The comparison table below records the original explored directions. The current implementation baseline is the cool-slate refactor documented in `visual-design-foundation.md`, `component-strategy.md`, and `responsive-design-accessibility.md`.
+
 | Direction | Density | Filter Bar | Lane Headers | Card Border |
 |---|---|---|---|---|
 | **A · Compact Scan** | Maximum (3-line clamp, 7px gap) | Light, `#FFFFFF` | Subtle top-border accent (3px) | 4px left-border |
@@ -26,7 +28,7 @@ Three interactive design directions were generated and evaluated during UX desig
 - Start with Direction A card dimensions, gap sizes, and filter bar as the production baseline.
 - The context drawer pattern from the prototype supports the 250ms slide-in + skeleton shimmer + breadcrumb header pattern, but implementation must follow the corrected drawer context rule in `core-user-experience.md`.
 - The delay banner (amber, non-blocking, below filter bar) is confirmed as the correct placement from the prototype.
-- Signal card left-border category accents are confirmed as readable at desktop viewing distance.
+- Signal card category accents are confirmed as readable at desktop viewing distance. The current UI refactor expresses this through full active borders/rings rather than the earlier left-border-only treatment.
 
 ## Elements Noted from Other Directions
 

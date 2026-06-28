@@ -65,7 +65,7 @@ Every element must communicate its interactivity through visual design alone —
 | Drawer z-index | `200` — above lane grid (`z-index: 50`) |
 | Signal ordering | Ascending chronological (oldest → newest) |
 | Temporal anchor | Anchor signal vertically centered in drawer body on open; signals above = older, below = newer |
-| Anchor highlight | Active left-border accent + category tint background only — no label, badge, or checkmark added |
+| Anchor highlight | Active category border/ring + category tint background only — no label, badge, or checkmark added |
 
 ## Filter & Search Patterns
 
