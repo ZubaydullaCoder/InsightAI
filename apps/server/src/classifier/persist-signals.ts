@@ -27,7 +27,7 @@ export async function persistSignals(
     hokim_related:       aiResult.hokim_related ?? false,
     keyword_matched:     rawMessage.keyword_matched,
     matched_keyword:     rawMessage.matched_keyword,
-    short_label:         aiResult.short_label ?? null,
+    short_label:         aiResult.classify_reason ?? null,
     classified_at:       new Date(),
   }
 

@@ -42,7 +42,7 @@ describe('classifyWithOpenAiCompatible', () => {
               decision:      'signal',
               categories:    ['waste'],
               hokim_related: false,
-              short_label:   'Waste issue',
+              classify_reason:   'Waste issue',
             }),
           },
         },
@@ -69,7 +69,7 @@ describe('classifyWithOpenAiCompatible', () => {
       messages:    [
         {
           role:    'user',
-          content: expect.stringContaining('<message>\nChiqindi muammosi\n</message>'),
+          content: expect.stringContaining('<message>\nChiqindi muammosi </message>'),
         },
       ],
       response_format: {
@@ -89,7 +89,7 @@ describe('classifyWithOpenAiCompatible', () => {
         decision:      'signal',
         categories:    ['waste'],
         hokim_related: false,
-        short_label:   'Waste issue',
+        classify_reason:   'Waste issue',
       },
     })
   })

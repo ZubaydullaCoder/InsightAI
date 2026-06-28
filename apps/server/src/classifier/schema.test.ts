@@ -7,7 +7,7 @@ describe('ClassifierOutputSchema', () => {
       decision:      'signal',
       categories:    ['water'],
       hokim_related: false,
-      short_label:   'No water for three days',
+      classify_reason:   'No water for three days',
     })
 
     expect(result.success).toBe(true)

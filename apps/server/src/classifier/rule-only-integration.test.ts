@@ -34,7 +34,7 @@ describe('classifyMessage with rule-only provider', () => {
       decision:      'signal',
       categories:    ['gas'],
       hokim_related: true,
-      short_label:   'Possible gas issue',
+      classify_reason:   'Possible gas issue',
     })
     expect(loggerMocks.info).toHaveBeenCalledWith(
       expect.objectContaining({

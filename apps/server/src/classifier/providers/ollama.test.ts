@@ -37,7 +37,7 @@ describe('classifyWithOllama', () => {
           decision:      'signal',
           categories:    ['gas'],
           hokim_related: false,
-          short_label:   'Gas issue',
+          classify_reason:   'Gas issue',
         }),
       },
     }))
@@ -65,7 +65,7 @@ describe('classifyWithOllama', () => {
     }))
     expect(requestBody.messages[0]).toEqual({
       role:    'user',
-      content: expect.stringContaining('<message>\nGaz yoq\n</message>'),
+      content: expect.stringContaining('<message>\nGaz yoq </message>'),
     })
     expect(JSON.stringify(vi.mocked(fetch).mock.calls[0]?.[1]?.headers)).not.toContain('Authorization')
     expect(result).toEqual({
@@ -76,7 +76,7 @@ describe('classifyWithOllama', () => {
         decision:      'signal',
         categories:    ['gas'],
         hokim_related: false,
-        short_label:   'Gas issue',
+        classify_reason:   'Gas issue',
       },
     })
   })

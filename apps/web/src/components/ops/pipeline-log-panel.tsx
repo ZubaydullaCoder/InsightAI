@@ -63,6 +63,7 @@ function getEventDetail(event: PipelineEvent) {
     mahalla:          typeof detail['mahallaName'] === 'string' ? detail['mahallaName'] : null,
     telegramUpdateId: event.telegramUpdateId ?? detail['telegramUpdateId'],
     rawMessageId:     event.rawMessageId ?? detail['rawMessageId'],
+    classifyReason:    typeof detail['classifyReason'] === 'string' ? detail['classifyReason'] : null,
   }
 }
 
@@ -167,6 +168,20 @@ function EventLogPanel() {
           {event.eventType.toUpperCase().replace(/_/g, ' ')}
         </Tag>
       ),
+    },
+    {
+      title: 'AI Reason',
+      key:   'aiReason',
+      width: 170,
+      render: (_value, event) => {
+        if (!event.eventType.startsWith('classifier_')) return null
+        const detail = getEventDetail(event)
+        return detail.classifyReason ? (
+          <Typography.Text type="secondary" style={{ fontSize: 11, fontStyle: 'italic' }}>
+            {detail.classifyReason}
+          </Typography.Text>
+        ) : null
+      },
     },
     {
       title: 'Identifier',

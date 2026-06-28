@@ -9,14 +9,14 @@ export const ClassifierOutputSchema = z.discriminatedUnion('decision', [
     // service category (e.g. ["electricity", "gas"] for "svet ham gaz ham yo'q").
     // min(1) ensures at least one category; max(4) matches the four allowed values.
     categories:    z.array(CategorySchema).min(1).max(4),
-    hokim_related: z.boolean().optional(),
-    short_label:   z.string().max(100).optional(),
+    hokim_related:    z.boolean().optional(),
+    classify_reason:  z.string().max(200).optional(),
   }),
   z.object({
     decision:      z.literal('ignore'),
     categories:    z.array(CategorySchema).optional(),
-    hokim_related: z.boolean().optional(),
-    short_label:   z.string().max(100).optional(),
+    hokim_related:    z.boolean().optional(),
+    classify_reason:  z.string().max(200).optional(),
   }),
 ])
 

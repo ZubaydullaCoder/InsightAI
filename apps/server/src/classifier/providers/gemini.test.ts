@@ -43,7 +43,7 @@ describe('classifyWithGemini', () => {
         decision:      'signal',
         categories:    ['water'],
         hokim_related: false,
-        short_label:   'No water',
+        classify_reason:   'No water',
       }),
     })
 
@@ -72,7 +72,7 @@ describe('classifyWithGemini', () => {
         decision:      'signal',
         categories:    ['water'],
         hokim_related: false,
-        short_label:   'No water',
+        classify_reason:   'No water',
       },
     })
   })

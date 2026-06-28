@@ -97,10 +97,10 @@ const rawMessage = {
 
 function signalOutput(overrides: Partial<ClassifierOutput> = {}): ClassifierOutput {
   return {
-    decision:      'signal',
-    categories:    ['water'],
-    hokim_related: false,
-    short_label:   'Water outage',
+    decision:        'signal',
+    categories:      ['water'],
+    hokim_related:   false,
+    classify_reason: 'direct water outage complaint',
     ...overrides,
   } as ClassifierOutput
 }
@@ -155,7 +155,7 @@ describe('classifyBatch', () => {
         hokim_related:       false,
         keyword_matched:     true,
         matched_keyword:     'suv',
-        short_label:         'Water outage',
+        short_label:         'direct water outage complaint',
       }),
     })
     expect(prismaMocks.transaction).toHaveBeenCalledWith(expect.any(Function))
