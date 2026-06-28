@@ -74,6 +74,7 @@ export async function classifyBatch(
             detail:    {
               decision:       'signal',
               categories:     aiResult.categories,
+              signalsWritten: persistResult.signalsWritten,
               hokimRelated:   aiResult.hokim_related ?? false,
               classifyReason: aiResult.classify_reason ?? null,
             },

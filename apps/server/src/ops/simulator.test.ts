@@ -7,6 +7,7 @@ const mockDistrictFindFirst       = vi.hoisted(() => vi.fn())
 const mockMahallaFindUnique       = vi.hoisted(() => vi.fn())
 const mockRawMessageFindFirst     = vi.hoisted(() => vi.fn())
 const mockRawMessageCreate        = vi.hoisted(() => vi.fn())
+const mockSignalMessageFindFirst  = vi.hoisted(() => vi.fn())
 const mockPipelineEventFindFirst  = vi.hoisted(() => vi.fn())
 
 vi.mock('../shared/db.js', () => ({
@@ -14,6 +15,7 @@ vi.mock('../shared/db.js', () => ({
     district:      { findFirst: mockDistrictFindFirst },
     mahalla:       { findUnique: mockMahallaFindUnique },
     rawMessage:    { findFirst: mockRawMessageFindFirst, create: mockRawMessageCreate },
+    signalMessage: { findFirst: mockSignalMessageFindFirst },
     pipelineEvent: { findFirst: mockPipelineEventFindFirst },
   },
 }))
@@ -80,6 +82,7 @@ describe('injectSimulatedMessage()', () => {
     mockDistrictFindFirst.mockResolvedValue(ACTIVE_DISTRICT)
     mockMahallaFindUnique.mockResolvedValue(MAHALLA_IN_DISTRICT)
     mockRawMessageFindFirst.mockResolvedValue(null)
+    mockSignalMessageFindFirst.mockResolvedValue(null)
     mockRawMessageCreate.mockResolvedValue({ id: 42 })
   })
 
@@ -198,6 +201,30 @@ describe('injectSimulatedMessage()', () => {
       select:  { telegram_update_id: true },
     })
   })
+
+  it('starts below the smallest existing simulated signal ID after restart', async () => {
+    mockSignalMessageFindFirst.mockResolvedValueOnce({ telegram_update_id: -25 })
+
+    await injectSimulatedMessage({ mahallaId: 1, text: 'Message after persisted signal' })
+
+    const callData = mockRawMessageCreate.mock.calls[0]?.[0]?.data as Record<string, unknown>
+    expect(callData.telegram_update_id).toBe(-26)
+    expect(mockSignalMessageFindFirst).toHaveBeenCalledWith({
+      where:   { telegram_update_id: { lt: 0 } },
+      orderBy: { telegram_update_id: 'asc' },
+      select:  { telegram_update_id: true },
+    })
+  })
+
+  it('starts below the lower ID when both raw and signal simulated rows exist', async () => {
+    mockRawMessageFindFirst.mockResolvedValueOnce({ telegram_update_id: -10 })
+    mockSignalMessageFindFirst.mockResolvedValueOnce({ telegram_update_id: -25 })
+
+    await injectSimulatedMessage({ mahallaId: 1, text: 'Message after mixed simulated rows' })
+
+    const callData = mockRawMessageCreate.mock.calls[0]?.[0]?.data as Record<string, unknown>
+    expect(callData.telegram_update_id).toBe(-26)
+  })
 })
 
 // ─── simulateWebhook() ────────────────────────────────────────────────────────
@@ -209,6 +236,7 @@ describe('simulateWebhook()', () => {
     mockDistrictFindFirst.mockResolvedValue(ACTIVE_DISTRICT)
     mockMahallaFindUnique.mockResolvedValue(MAHALLA_IN_DISTRICT)
     mockRawMessageFindFirst.mockResolvedValue(null)
+    mockSignalMessageFindFirst.mockResolvedValue(null)
     mockPipeline.mockResolvedValue(undefined)
     mockPipelineEventFindFirst.mockResolvedValue(null)
   })
