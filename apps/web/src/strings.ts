@@ -34,6 +34,7 @@ export const strings = {
       waste:       'Чиқинди',
     },
     emptyLane:            'Бугун сигналлар йўқ',
+    searchEmptyLane:      'Қидирув натижалари топилмади',
     loading:              'Юкланмоқда...',
     loadErrorTitle:       'Сигналларни юклаб бўлмади',
     loadErrorDescription: 'Саҳифани янгилаб кўринг ёки кейинроқ қайта урининг.',
@@ -41,6 +42,16 @@ export const strings = {
     captionBadgeLabel:    'Расм тавсифи',
     delayBannerPrefix:    'Сигналлар янгиланмаяпти — охирги янгиланиш',
     delayBannerNoData:    'Сигналлар янгиланмаяпти — маълумот йўқ',
+  },
+  filterBar: {
+    preset1h:        '1 соат',
+    preset3h:        '3 соат',
+    preset6h:        '6 соат',
+    presetToday:     'Бугун',
+    presetYesterday: 'Кеча',
+    preset7d:        '7 кун',
+    allMahallas:     'Барча маҳаллалар',
+    searchPlaceholder: 'Қидириш...',
   },
 
 } as const
