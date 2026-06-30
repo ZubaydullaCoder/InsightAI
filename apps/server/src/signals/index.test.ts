@@ -24,20 +24,25 @@ vi.mock('../shared/env.js', () => ({ env: mockEnv }))
 vi.mock('../shared/db.js', () => ({
   prisma: {
     signalMessage: {
-      findMany: vi.fn(),
+      findMany:  vi.fn(),
+      findFirst: vi.fn(),
     },
   },
 }))
 
 // Mocks for query, mapper, logger — hoisted so factory closures can reference them
-const mockQuerySignals       = vi.hoisted(() => vi.fn())
-const mockGetTodayUTC5Range  = vi.hoisted(() => vi.fn())
-const mockMapSignalRow       = vi.hoisted(() => vi.fn())
-const mockLoggerError        = vi.hoisted(() => vi.fn())
+const mockQuerySignals        = vi.hoisted(() => vi.fn())
+const mockGetTodayUTC5Range   = vi.hoisted(() => vi.fn())
+const mockQuerySignalById     = vi.hoisted(() => vi.fn())
+const mockQueryContextSignals = vi.hoisted(() => vi.fn())
+const mockMapSignalRow        = vi.hoisted(() => vi.fn())
+const mockLoggerError         = vi.hoisted(() => vi.fn())
 
 vi.mock('./query.js', () => ({
-  querySignals:      mockQuerySignals,
-  getTodayUTC5Range: mockGetTodayUTC5Range,
+  querySignals:         mockQuerySignals,
+  getTodayUTC5Range:    mockGetTodayUTC5Range,
+  querySignalById:      mockQuerySignalById,
+  queryContextSignals:  mockQueryContextSignals,
 }))
 
 vi.mock('./mapper.js', () => ({
@@ -345,5 +350,260 @@ describe('GET /api/signals', () => {
     // Must not be wrapped
     expect(res.body.data).toBeUndefined()
     expect(res.body.signals).toBeUndefined()
+  })
+})
+
+// ─── GET /api/signals/:id/context ────────────────────────────────────────────
+
+describe('GET /api/signals/:id/context', () => {
+  let app: ReturnType<typeof createTestApp>
+
+  // Anchor signal fixture — reuses base fields from MOCK_SIGNAL but with explicit id/category/mahalla_id
+  const ANCHOR_SIGNAL_ROW = {
+    id:                    42,
+    district_id:           SESSION_DISTRICT_ID,
+    mahalla_id:            5,
+    category:              'gas',
+    hokim_related:         false,
+    mahalla:               { name: 'Navbahor', telegram_chat_id: '-100987654321' },
+  }
+
+  beforeEach(() => {
+    app = createTestApp()
+    vi.clearAllMocks()
+    mockGetTodayUTC5Range.mockReturnValue(MOCK_RANGE)
+    mockQuerySignalById.mockResolvedValue(null)     // default: not found → 404
+    mockQueryContextSignals.mockResolvedValue([])   // default: empty context
+    mockMapSignalRow.mockReturnValue(MOCK_SIGNAL)
+  })
+
+  // ── Authentication ──────────────────────────────────────────────────────────
+
+  it('returns 401 for unauthenticated request', async () => {
+    const res = await request(app).get('/api/signals/42/context')
+    expect(res.status).toBe(401)
+    expect(res.body).toMatchObject({ statusCode: 401, error: 'Unauthorized' })
+  })
+
+  // ── 404 — signal not found ──────────────────────────────────────────────────
+
+  it('returns 404 when signal not found in session district', async () => {
+    mockQuerySignalById.mockResolvedValue(null)
+
+    const agent = request.agent(app)
+    await agent.post('/test/login').send({ userId: 1, districtId: SESSION_DISTRICT_ID })
+
+    const res = await agent.get('/api/signals/99/context')
+    expect(res.status).toBe(404)
+    expect(res.body).toMatchObject({ statusCode: 404, error: 'Not Found' })
+  })
+
+  it('returns 404 when signal exists but belongs to a different district (no 403 leakage)', async () => {
+    // DB returns null because district_id mismatch — same as not found
+    mockQuerySignalById.mockResolvedValue(null)
+
+    const agent = request.agent(app)
+    await agent.post('/test/login').send({ userId: 1, districtId: SESSION_DISTRICT_ID })
+
+    const res = await agent.get('/api/signals/42/context')
+    expect(res.status).toBe(404)  // NOT 403 — no info leakage
+    expect(res.body).toMatchObject({ statusCode: 404 })
+  })
+
+  // ── 404 — invalid :id param ─────────────────────────────────────────────────
+
+  it('returns 404 when :id is not a valid number ("abc")', async () => {
+    const agent = request.agent(app)
+    await agent.post('/test/login').send({ userId: 1, districtId: SESSION_DISTRICT_ID })
+
+    const res = await agent.get('/api/signals/abc/context')
+    expect(res.status).toBe(404)
+    expect(mockQuerySignalById).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 when :id is a partial number "42abc" — guards against parseInt trap', async () => {
+    const agent = request.agent(app)
+    await agent.post('/test/login').send({ userId: 1, districtId: SESSION_DISTRICT_ID })
+
+    const res = await agent.get('/api/signals/42abc/context')
+    expect(res.status).toBe(404)
+    expect(mockQuerySignalById).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 when :id is zero', async () => {
+    const agent = request.agent(app)
+    await agent.post('/test/login').send({ userId: 1, districtId: SESSION_DISTRICT_ID })
+
+    const res = await agent.get('/api/signals/0/context')
+    expect(res.status).toBe(404)
+    expect(mockQuerySignalById).not.toHaveBeenCalled()
+  })
+
+  it('returns 404 when :id is negative ("-1") — /^\\d+$/ guard rejects it', async () => {
+    const agent = request.agent(app)
+    await agent.post('/test/login').send({ userId: 1, districtId: SESSION_DISTRICT_ID })
+
+    const res = await agent.get('/api/signals/-1/context')
+    expect(res.status).toBe(404)
+    expect(mockQuerySignalById).not.toHaveBeenCalled()
+  })
+
+  // ── Default time range (no from/to) ────────────────────────────────────────
+
+  it('calls getTodayUTC5Range when no from/to params provided', async () => {
+    mockQuerySignalById.mockResolvedValue(ANCHOR_SIGNAL_ROW)
+    mockQueryContextSignals.mockResolvedValue([ANCHOR_SIGNAL_ROW])
+
+    const agent = request.agent(app)
+    await agent.post('/test/login').send({ userId: 1, districtId: SESSION_DISTRICT_ID })
+
+    const res = await agent.get('/api/signals/42/context')
+
+    expect(res.status).toBe(200)
+    expect(mockGetTodayUTC5Range).toHaveBeenCalledOnce()
+    expect(mockQueryContextSignals).toHaveBeenCalledWith(
+      SESSION_DISTRICT_ID,
+      ANCHOR_SIGNAL_ROW.mahalla_id,
+      ANCHOR_SIGNAL_ROW.category,
+      MOCK_RANGE.from,
+      MOCK_RANGE.to,
+    )
+  })
+
+  // ── Explicit from/to params ─────────────────────────────────────────────────
+
+  it('passes parsed from/to Date objects to queryContextSignals when provided', async () => {
+    mockQuerySignalById.mockResolvedValue(ANCHOR_SIGNAL_ROW)
+    mockQueryContextSignals.mockResolvedValue([ANCHOR_SIGNAL_ROW])
+
+    const agent = request.agent(app)
+    await agent.post('/test/login').send({ userId: 1, districtId: SESSION_DISTRICT_ID })
+
+    const fromStr = '2026-06-13T19:00:00Z'
+    const toStr   = '2026-06-14T18:59:59Z'
+
+    const res = await agent.get(`/api/signals/42/context?from=${fromStr}&to=${toStr}`)
+
+    expect(res.status).toBe(200)
+    expect(mockGetTodayUTC5Range).not.toHaveBeenCalled()
+    expect(mockQueryContextSignals).toHaveBeenCalledWith(
+      SESSION_DISTRICT_ID,
+      ANCHOR_SIGNAL_ROW.mahalla_id,
+      ANCHOR_SIGNAL_ROW.category,
+      new Date(fromStr),
+      new Date(toStr),
+    )
+  })
+
+  // ── Hokim-lane: uses anchor.category, not hokim_related ────────────────────
+
+  it('uses anchor.category (not hokim_related) for context query when anchor is hokim-related', async () => {
+    const hokimAnchor = { ...ANCHOR_SIGNAL_ROW, category: 'gas', hokim_related: true }
+    mockQuerySignalById.mockResolvedValue(hokimAnchor)
+    mockQueryContextSignals.mockResolvedValue([hokimAnchor])
+
+    const agent = request.agent(app)
+    await agent.post('/test/login').send({ userId: 1, districtId: SESSION_DISTRICT_ID })
+
+    await agent.get('/api/signals/42/context')
+
+    // Must call with category='gas', NOT any hokim_related filter
+    const callArgs = mockQueryContextSignals.mock.calls[0] as [number, number, string, Date, Date]
+    expect(callArgs[2]).toBe('gas')
+    // Confirm only 5 args (no hokim flag smuggled in)
+    expect(callArgs).toHaveLength(5)
+  })
+
+  // ── 200 — success: unwrapped Signal[] ──────────────────────────────────────
+
+  it('returns 200 with an unwrapped Signal[] array (not wrapped in data key)', async () => {
+    mockQuerySignalById.mockResolvedValue(ANCHOR_SIGNAL_ROW)
+    mockQueryContextSignals.mockResolvedValue([ANCHOR_SIGNAL_ROW])
+    mockMapSignalRow.mockReturnValue(MOCK_SIGNAL)
+
+    const agent = request.agent(app)
+    await agent.post('/test/login').send({ userId: 1, districtId: SESSION_DISTRICT_ID })
+
+    const res = await agent.get('/api/signals/42/context')
+
+    expect(res.status).toBe(200)
+    expect(Array.isArray(res.body)).toBe(true)
+    expect(res.body[0]).toEqual(MOCK_SIGNAL)
+    expect(res.body.data).toBeUndefined()
+  })
+
+  // ── 400 — date validation ───────────────────────────────────────────────────
+
+  it('returns 400 for invalid date format in from param', async () => {
+    mockQuerySignalById.mockResolvedValue(ANCHOR_SIGNAL_ROW)
+
+    const agent = request.agent(app)
+    await agent.post('/test/login').send({ userId: 1, districtId: SESSION_DISTRICT_ID })
+
+    const res = await agent.get('/api/signals/42/context?from=not-a-date&to=2026-06-19T00:00:00Z')
+    expect(res.status).toBe(400)
+    expect(res.body).toMatchObject({ statusCode: 400, error: 'Bad Request' })
+    expect(res.body.message).toContain('Invalid date format')
+  })
+
+  it('returns 400 when only from param is given (missing to)', async () => {
+    const agent = request.agent(app)
+    await agent.post('/test/login').send({ userId: 1, districtId: SESSION_DISTRICT_ID })
+
+    const res = await agent.get('/api/signals/42/context?from=2026-06-19T00:00:00Z')
+    expect(res.status).toBe(400)
+    expect(res.body.message).toContain('Both from and to')
+  })
+
+  it('returns 400 when from is after to', async () => {
+    mockQuerySignalById.mockResolvedValue(ANCHOR_SIGNAL_ROW)
+
+    const agent = request.agent(app)
+    await agent.post('/test/login').send({ userId: 1, districtId: SESSION_DISTRICT_ID })
+
+    const res = await agent.get(
+      '/api/signals/42/context?from=2026-06-19T18:59:59Z&to=2026-06-19T00:00:00Z',
+    )
+    expect(res.status).toBe(400)
+    expect(res.body.message).toContain('from must be before or equal to to')
+  })
+
+  // ── 500 — internal error ────────────────────────────────────────────────────
+
+  it('returns 500 and logs when queryContextSignals throws', async () => {
+    const dbError = new Error('DB down')
+    mockQuerySignalById.mockResolvedValue(ANCHOR_SIGNAL_ROW)
+    mockQueryContextSignals.mockRejectedValue(dbError)
+
+    const agent = request.agent(app)
+    await agent.post('/test/login').send({ userId: 1, districtId: SESSION_DISTRICT_ID })
+
+    const res = await agent.get('/api/signals/42/context')
+
+    expect(res.status).toBe(500)
+    expect(res.body).toMatchObject({ statusCode: 500, error: 'Internal Server Error' })
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      { err: dbError, districtId: SESSION_DISTRICT_ID, signalId: 42 },
+      'Signal context query failed',
+    )
+  })
+
+  it('returns 500 and logs when mapSignalRow throws (corrupt DB data)', async () => {
+    const mapError = new Error('Invalid signal category: road')
+    mockQuerySignalById.mockResolvedValue(ANCHOR_SIGNAL_ROW)
+    mockQueryContextSignals.mockResolvedValue([ANCHOR_SIGNAL_ROW])
+    mockMapSignalRow.mockImplementationOnce(() => { throw mapError })
+
+    const agent = request.agent(app)
+    await agent.post('/test/login').send({ userId: 1, districtId: SESSION_DISTRICT_ID })
+
+    const res = await agent.get('/api/signals/42/context')
+
+    expect(res.status).toBe(500)
+    expect(res.body).toMatchObject({ statusCode: 500, error: 'Internal Server Error' })
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      { err: mapError, districtId: SESSION_DISTRICT_ID, signalId: 42 },
+      'Signal context query failed',
+    )
   })
 })

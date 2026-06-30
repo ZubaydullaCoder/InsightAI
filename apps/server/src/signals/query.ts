@@ -59,3 +59,50 @@ export async function querySignals(
     include: SIGNAL_MAHALLA_INCLUDE,
   })
 }
+
+/**
+ * Looks up a single signal by ID scoped to the authenticated district.
+ * Returns null if not found or belongs to a different district (no info leakage).
+ */
+export async function querySignalById(
+  id: number,
+  districtId: number,
+): Promise<SignalMessageWithMahalla | null> {
+  return prisma.signalMessage.findFirst({
+    where: {
+      id,
+      district_id: districtId,
+    },
+    include: SIGNAL_MAHALLA_INCLUDE,
+  })
+}
+
+/**
+ * Returns all signals in the same mahalla + category + district + time range,
+ * sorted ascending by telegram_timestamp for drawer temporal ordering.
+ * The anchor signal itself is included in the result.
+ */
+export async function queryContextSignals(
+  districtId: number,
+  mahallaId: number,
+  category: string,
+  from: Date,
+  to: Date,
+): Promise<SignalMessageWithMahalla[]> {
+  return prisma.signalMessage.findMany({
+    where: {
+      district_id: districtId,
+      mahalla_id:  mahallaId,
+      category,
+      telegram_timestamp: {
+        gte: from,
+        lte: to,
+      },
+    },
+    orderBy: [
+      { telegram_timestamp: 'asc' },
+      { id: 'asc' },
+    ],
+    include: SIGNAL_MAHALLA_INCLUDE,
+  })
+}

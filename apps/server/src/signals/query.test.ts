@@ -17,17 +17,19 @@ const mockEnv = vi.hoisted(() => ({
 vi.mock('../shared/env.js', () => ({ env: mockEnv }))
 
 // ─── Mock prisma — do not hit a real database ─────────────────────────────────
-const mockFindMany = vi.hoisted(() => vi.fn())
+const mockFindMany  = vi.hoisted(() => vi.fn())
+const mockFindFirst = vi.hoisted(() => vi.fn())
 
 vi.mock('../shared/db.js', () => ({
   prisma: {
     signalMessage: {
-      findMany: mockFindMany,
+      findMany:  mockFindMany,
+      findFirst: mockFindFirst,
     },
   },
 }))
 
-import { getTodayUTC5Range, querySignals } from './query.js'
+import { getTodayUTC5Range, querySignals, querySignalById, queryContextSignals } from './query.js'
 
 // ─── getTodayUTC5Range ────────────────────────────────────────────────────────
 
@@ -126,6 +128,123 @@ describe('querySignals', () => {
     mockFindMany.mockResolvedValueOnce(mockRows)
 
     const result = await querySignals(1, new Date(), new Date())
+    expect(result).toStrictEqual(mockRows)
+  })
+})
+
+// ─── querySignalById ──────────────────────────────────────────────────────────
+
+const MAHALLA_INCLUDE = {
+  mahalla: {
+    select: {
+      name: true,
+      telegram_chat_id: true,
+    },
+  },
+}
+
+describe('querySignalById', () => {
+  beforeEach(() => {
+    mockFindFirst.mockReset()
+  })
+
+  it('calls prisma.signalMessage.findFirst with id and district_id in where clause', async () => {
+    mockFindFirst.mockResolvedValueOnce(null)
+
+    await querySignalById(42, 7)
+
+    expect(mockFindFirst).toHaveBeenCalledOnce()
+    expect(mockFindFirst).toHaveBeenCalledWith({
+      where: { id: 42, district_id: 7 },
+      include: MAHALLA_INCLUDE,
+    })
+  })
+
+  it('returns null when findFirst returns null (not found or different district)', async () => {
+    mockFindFirst.mockResolvedValueOnce(null)
+
+    const result = await querySignalById(99, 7)
+    expect(result).toBeNull()
+  })
+
+  it('returns the row when findFirst finds a matching signal', async () => {
+    const mockRow = { id: 42, district_id: 7, category: 'gas', mahalla_id: 5, mahalla: { name: 'Test', telegram_chat_id: '-100' } }
+    mockFindFirst.mockResolvedValueOnce(mockRow)
+
+    const result = await querySignalById(42, 7)
+    expect(result).toStrictEqual(mockRow)
+  })
+
+  it('uses district_id from argument — cross-district signal returns null', async () => {
+    // Signal 42 belongs to district 3, not district 7 — DB returns null
+    mockFindFirst.mockResolvedValueOnce(null)
+
+    const result = await querySignalById(42, 7)
+    expect(result).toBeNull()
+    // Verify district scope is in the where clause
+    const call = mockFindFirst.mock.calls[0]?.[0] as { where: { id: number; district_id: number } }
+    expect(call.where.district_id).toBe(7)
+  })
+})
+
+// ─── queryContextSignals ──────────────────────────────────────────────────────
+
+describe('queryContextSignals', () => {
+  beforeEach(() => {
+    mockFindMany.mockReset()
+  })
+
+  const from = new Date('2026-06-13T19:00:00.000Z')
+  const to   = new Date('2026-06-14T18:59:59.000Z')
+
+  it('calls findMany with district_id, mahalla_id, category, and date range', async () => {
+    mockFindMany.mockResolvedValueOnce([])
+
+    await queryContextSignals(7, 5, 'gas', from, to)
+
+    expect(mockFindMany).toHaveBeenCalledOnce()
+    expect(mockFindMany).toHaveBeenCalledWith({
+      where: {
+        district_id: 7,
+        mahalla_id:  5,
+        category:    'gas',
+        telegram_timestamp: {
+          gte: from,
+          lte: to,
+        },
+      },
+      orderBy: [
+        { telegram_timestamp: 'asc' },
+        { id: 'asc' },
+      ],
+      include: MAHALLA_INCLUDE,
+    })
+  })
+
+  it('uses ascending orderBy (oldest first) — differs from querySignals desc order', async () => {
+    mockFindMany.mockResolvedValueOnce([])
+
+    await queryContextSignals(7, 5, 'water', from, to)
+
+    const call = mockFindMany.mock.calls[0]?.[0] as { orderBy: Array<Record<string, string>> }
+    expect(call.orderBy[0]).toEqual({ telegram_timestamp: 'asc' })
+    expect(call.orderBy[1]).toEqual({ id: 'asc' })
+  })
+
+  it('includes mahalla with name and telegram_chat_id select', async () => {
+    mockFindMany.mockResolvedValueOnce([])
+
+    await queryContextSignals(7, 5, 'electricity', from, to)
+
+    const call = mockFindMany.mock.calls[0]?.[0] as { include: typeof MAHALLA_INCLUDE }
+    expect(call.include).toEqual(MAHALLA_INCLUDE)
+  })
+
+  it('returns results from findMany unchanged', async () => {
+    const mockRows = [{ id: 1 }, { id: 2 }]
+    mockFindMany.mockResolvedValueOnce(mockRows)
+
+    const result = await queryContextSignals(7, 5, 'gas', from, to)
     expect(result).toStrictEqual(mockRows)
   })
 })
