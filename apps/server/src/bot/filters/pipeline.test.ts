@@ -23,6 +23,8 @@ const { mockEnv } = vi.hoisted(() => ({
     BOT_TOKEN:               'mock-bot-token',
     TELEGRAM_WEBHOOK_SECRET: 'mock-secret',
     FILTER_MODE:             'ai_full' as 'ai_full' | 'keyword_gate' | 'shadow_compare',
+    AI_API_KEY:              'test-key',
+    AI_MODEL:                'gemini-2.5-flash',
   },
 }))
 
@@ -65,6 +67,9 @@ import {
   isTrivialContent,
   pipeline,
 } from './pipeline.js'
+import { handleEditedMessage } from '../index.js'
+import { logger } from '../../shared/logger.js'
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -289,15 +294,13 @@ describe('Secret token rejection (AC-7)', () => {
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Edited message handler — Task 8.4
-// Tests the bot/index.ts handler, NOT pipeline.ts (edited updates don't enter
-// pipeline). We test that the logger.info is called with correct context.
+// Edited message handler — Task 8.4 (P-4: non-tautological — calls actual handler)
+// Tests the exported handleEditedMessage from bot/index.ts, NOT an inline call.
 // ─────────────────────────────────────────────────────────────────────────────
 describe('Edited message handler (bot/index.ts)', () => {
-  it('logs info and does not call pipeline when edited_message arrives', async () => {
-    const { logger } = await import('../../shared/logger.js')
-    // Simulate the bot's edited_message handler being invoked
-    // We directly call the behavior: edited updates should only trigger a log
+  it('logs info and does not call pipeline when edited_message arrives', () => {
+    vi.clearAllMocks()
+
     const editedUpdate = {
       update_id:       2001,
       edited_message: {
@@ -310,27 +313,21 @@ describe('Edited message handler (bot/index.ts)', () => {
       },
     }
 
-    // The pipeline should NEVER be called for edited_message
-    vi.clearAllMocks()
+    // Call the actual exported handler — not an inline mock
+    handleEditedMessage({ update: editedUpdate })
 
-    // Call the actual handler logic inline (mirrors bot/index.ts behavior)
-    logger.info(
-      {
-        updateId:  editedUpdate.update_id,
-        chatId:    editedUpdate.edited_message.chat.id.toString(),
-        messageId: editedUpdate.edited_message.message_id,
-      },
-      'Pre-filter discard: edited_message ignored',
-    )
-
+    // logger.info is the vi.fn() injected by the vi.mock('../../shared/logger.js')
+    // factory at the top of this file. handleEditedMessage calls it internally.
     expect(logger.info).toHaveBeenCalledWith(
       expect.objectContaining({ updateId: 2001 }),
       'Pre-filter discard: edited_message ignored',
     )
-    // upsert should NOT have been called
+    // pipeline/upsert must NOT have been called
+    expect(mockPipelineCreate).not.toHaveBeenCalled()
     expect(mockUpsert).not.toHaveBeenCalled()
   })
 })
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Full pipeline integration — unmonitored group discard
@@ -641,25 +638,32 @@ describe('pipeline — getActiveKeywords DB error: fail-open (CR Patch P1)', () 
     mockPipelineCreate.mockResolvedValue({})
   })
 
-  it('does not throw when getActiveKeywords rejects — treats as empty keyword list', async () => {
+  it('does not throw when getActiveKeywords rejects — writes the message fail-open', async () => {
     mockFindMany.mockRejectedValue(new Error('DB connection error'))
     const update = makeUpdate({ text: 'suv bor' }, 8001)
 
-    // Must not throw — pipeline continues with empty keyword list
     await expect(pipeline(update)).resolves.not.toThrow()
+    expect(mockUpsert).toHaveBeenCalled()
   })
 
-  it('treats empty keyword list on DB error as no-match in keyword_gate — writes keyword_skip event', async () => {
+  it('bypasses keyword_gate on DB error — writes raw message and prefilter_pass event', async () => {
     mockFindMany.mockRejectedValue(new Error('DB connection error'))
     const update = makeUpdate({ text: 'suv bor' }, 8002)
 
     await pipeline(update)
 
-    // With empty keyword list: no match → keyword_gate skips upsert
-    expect(mockUpsert).not.toHaveBeenCalled()
+    expect(mockUpsert).toHaveBeenCalled()
     expect(mockPipelineCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ event_type: 'keyword_skip' }),
+        data: expect.objectContaining({
+          event_type:     'prefilter_pass',
+          raw_message_id: 100,
+          detail: expect.objectContaining({
+            filterMode:          'keyword_gate',
+            keywordLookupFailed: true,
+            reason:              'Keyword lookup failed; fail-open in keyword_gate mode',
+          }),
+        }),
       }),
     )
   })
@@ -692,4 +696,3 @@ describe('pipeline — pipelineEvent.create DB error: does not crash pipeline (C
     expect(mockUpsert).toHaveBeenCalledOnce()
   })
 })
-
