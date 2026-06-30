@@ -11,6 +11,7 @@ import { prisma } from '../shared/db.js'
 import { purgeOldSignals, runClassifyBatchWithLock } from '../classifier/index.js'
 import { authRouter, requireAuth } from '../auth/index.js'
 import { signalsRouter } from '../signals/index.js'
+import { healthRouter } from '../health/index.js'
 
 const app = express()
 
@@ -42,6 +43,7 @@ app.use('/api/auth', authRouter)
 app.use('/api', requireAuth)
 
 app.use('/api', signalsRouter)
+app.use('/api', healthRouter)
 
 // TODO: Replace when dashboard mahalla filter route is implemented
 app.get('/api/mahallas', async (req, res) => {
@@ -59,18 +61,6 @@ app.get('/api/mahallas', async (req, res) => {
     logger.error({ err, districtId: req.session.districtId }, 'Mahallas query failed')
     res.status(500).json({ statusCode: 500, error: 'Internal Server Error', message: 'Failed to load mahallas' })
   }
-})
-
-// TODO: Replace in Story 5.1 — full health state endpoint
-app.get('/api/health', (_req, res) => {
-  res.json({
-    status: 'no_data',
-    lastBatchAt: null,
-    lastBatchStatus: null,
-    messagesProcessed: null,
-    signalsWritten: null,
-    queueDepth: 0,
-  })
 })
 
 cron.schedule('*/20 * * * *', () => {
