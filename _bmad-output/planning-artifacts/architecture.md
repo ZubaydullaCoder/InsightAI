@@ -1,6 +1,6 @@
-# Architecture Decision Document — PublicInsight AI (Phase 1)
+# Architecture Decision Document — Insight AI (Phase 1)
 
-**Project:** public-insight-ai
+**Project:** insight-ai
 **Author:** Zubaydulla
 **Date:** 2026-06-01
 **Phase:** 1 — Validation-First Development

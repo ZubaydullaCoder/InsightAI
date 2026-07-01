@@ -43,10 +43,12 @@ export async function querySignals(
   districtId: number,
   from: Date,
   to: Date,
+  category?: string,
 ): Promise<SignalMessageWithMahalla[]> {
   return prisma.signalMessage.findMany({
     where: {
       district_id: districtId,
+      category: category || undefined,
       telegram_timestamp: {
         gte: from,
         lte: to,

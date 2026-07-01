@@ -1,19 +1,19 @@
 ---
-project: public-insight-ai
+project: insight-ai
 status: active
 purpose: AI agent implementation context
-last_updated: 2026-06-29
+last_updated: 2026-07-01
 ---
 
 # Project Context
 
 ## Purpose
 
-This file gives AI agents durable implementation context for PublicInsight AI: product boundaries, source-of-truth rules, stack choices, and non-obvious constraints. It is not a sprint tracker and does not replace the PRD, architecture, story files, validation reports, or stakeholder decisions log.
+This file gives AI agents durable implementation context for Insight AI: product boundaries, source-of-truth rules, stack choices, and non-obvious constraints. It is not a sprint tracker and does not replace the PRD, architecture, story files, validation reports, or stakeholder decisions log.
 
 ## Product Context
 
-PublicInsight AI is a private internal civic signal monitoring system for district leadership in Uzbekistan.
+Insight AI is a private internal civic signal monitoring system for district leadership in Uzbekistan.
 
 It listens to selected mahalla Telegram supergroups through an official bot, captures text/caption messages, filters civic signals, and displays relevant messages in a dashboard organized by service category, mahalla, and time.
 

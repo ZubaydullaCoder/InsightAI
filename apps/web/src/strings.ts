@@ -4,7 +4,7 @@
 
 export const strings = {
   login: {
-    title: 'PublicInsight AI',
+    title: 'Insight AI',
     subtitle: 'Тизимга кириш',
     usernameLabel: 'Фойдаланувчи номи',
     usernamePlaceholder: 'Фойдаланувчи номи',
@@ -22,8 +22,8 @@ export const strings = {
     opsPlaceholder: 'Оператор панели тайёрланмоқда',
   },
   ops: {
-    documentTitle:    ['Ops Console – Pub', 'licInsight AI [Phase 1]'].join(''),
-    pageTitle:        ['PUB', 'LICINSIGHT AI — DEVELOPER OPS CONSOLE [Phase 1]'].join(''),
+    documentTitle:    ['Ops Console – Ins', 'ight AI [Phase 1]'].join(''),
+    pageTitle:        ['INS', 'IGHT AI — DEVELOPER OPS CONSOLE [Phase 1]'].join(''),
     disabledMessage:  'Ops Console is disabled. Set OPS_ENABLED=true in .env and restart the server.',
     forbiddenMessage: 'Access denied. Ops Console requires a valid X-Ops-Secret header or localhost origin.',
     loadingMessage:   'Checking Ops Console access...',
@@ -37,8 +37,8 @@ export const strings = {
     panelPlaceholder: (section: string) => `${section} panel — coming in a later story`,
   },
   app: {
-    title: 'PublicInsight AI',
-    unsupportedScreen: 'PublicInsight AI фақат компьютер экранида ишлайди',
+    title: 'Insight AI',
+    unsupportedScreen: 'Insight AI фақат компьютер экранида ишлайди',
     logout: 'Чиқиш',
     logoutError: 'Чиқишда хатолик юз берди',
   },
@@ -73,6 +73,8 @@ export const strings = {
   },
   drawer: {
     onlyAnchorMessage: 'Бу маҳаллада бошқа сигналлар топилмади',
+    statusDisabledForHokim: 'Мақомни ўзгартириш фақат тегишли ташкилот томонидан амалга оширилади',
+    statusDisabledForOtherUtility: 'Ушбу тоифадаги муаммолар мақомини ўзгартиришга сизга рухсат берилмаган',
   },
 
 } as const

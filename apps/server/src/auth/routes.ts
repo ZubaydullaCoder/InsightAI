@@ -108,8 +108,9 @@ router.post('/login', async (req, res) => {
 
     req.session.userId = user.id
     req.session.districtId = user.district_id
+    req.session.role = user.role
 
-    logger.info({ userId: user.id, districtId: user.district_id }, 'User logged in')
+    logger.info({ userId: user.id, districtId: user.district_id, role: user.role }, 'User logged in')
     res.status(200).json({ ok: true })
   } catch (err) {
     logger.error({ err }, 'Unhandled error during login')
@@ -140,6 +141,7 @@ router.get('/me', async (req, res) => {
       authenticated: true,
       userId:        session.userId,
       districtId:    session.districtId,
+      role:          session.role,
     })
   } catch (err) {
     logger.error({ err, userId: req.session.userId, districtId: req.session.districtId }, 'Session probe failed')

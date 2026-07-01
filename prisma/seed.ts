@@ -39,17 +39,41 @@ async function main() {
     })
   }
 
-  // 3 — Operator user (devpassword only — rotate before pilot)
+  // 3 — Operator and Utility users (devpassword only — rotate before pilot)
   const password_hash = await argon2.hash('devpassword')
+  
+  // Hokim / Operator user
   await prisma.user.upsert({
     where:  { username: 'operator' },
-    update: {},
+    update: { role: 'hokim' },
     create: {
       username:      'operator',
       password_hash,
       district_id:   district.id,
+      role:          'hokim',
     },
   })
+
+  // Utility company users
+  const utilityUsers = [
+    { username: 'water_user', role: 'water' },
+    { username: 'gas_user', role: 'gas' },
+    { username: 'electricity_user', role: 'electricity' },
+    { username: 'waste_user', role: 'waste' },
+  ]
+
+  for (const uu of utilityUsers) {
+    await prisma.user.upsert({
+      where:  { username: uu.username },
+      update: { role: uu.role },
+      create: {
+        username:      uu.username,
+        password_hash,
+        district_id:   district.id,
+        role:          uu.role,
+      },
+    })
+  }
 
   // 4 — Core Keywords (Latin and Cyrillic pairs)
   const defaultKeywords = [

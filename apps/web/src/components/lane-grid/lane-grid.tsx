@@ -16,9 +16,14 @@ export interface LaneGridProps {
   onCardClick: (signal: Signal) => void
   isKeywordSearch?: boolean   // when true, shows keyword-search-specific empty state
   isDrawerOpen?: boolean      // when true, LaneColumn scroll containers freeze (AC-8)
+  userRole?: string
 }
 
-export function LaneGrid({ signals, activeSignalId, onCardClick, isKeywordSearch, isDrawerOpen }: LaneGridProps) {
+export function LaneGrid({ signals, activeSignalId, onCardClick, isKeywordSearch, isDrawerOpen, userRole }: LaneGridProps) {
+  const activeLanes = ['water', 'electricity', 'gas', 'waste'].includes(userRole || '')
+    ? [userRole as LaneKey]
+    : LANE_ORDER
+
   return (
     <div
       className="lane-board"
@@ -27,7 +32,7 @@ export function LaneGrid({ signals, activeSignalId, onCardClick, isKeywordSearch
         overflow: 'hidden',
       }}
     >
-      {LANE_ORDER.map((laneKey) => (
+      {activeLanes.map((laneKey) => (
         <LaneColumn
           key={laneKey}
           laneKey={laneKey}

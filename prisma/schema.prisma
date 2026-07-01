@@ -48,6 +48,7 @@ model User {
   password_hash String
   is_active     Boolean  @default(true)
   created_at    DateTime @default(now())
+  role          String   @default("hokim") @db.VarChar(30)
 
   district District @relation(fields: [district_id], references: [id])
 

@@ -1,6 +1,6 @@
 # Architecture — Developer Ops Console
 
-**Project:** public-insight-ai
+**Project:** insight-ai
 **Phase:** 1 — Validation-First Development
 **Status:** Part of Phase 1 architecture
 
@@ -45,7 +45,7 @@ boundaries. Each panel is independently scrollable.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  PUBLICINSIGHT AI — DEVELOPER OPS CONSOLE  [Phase 1]       │
+│  INSIGHT AI — DEVELOPER OPS CONSOLE  [Phase 1]             │
 ├───────────────┬─────────────────────────────────────────┤
 │               │                                         │
 │  System       │  Filtering Mode + Keyword Registry      │

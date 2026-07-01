@@ -169,7 +169,7 @@ export function AppShell({
           }}
         >
           <LogoIcon />
-          PublicInsight AI
+          Insight AI
         </div>
 
         {/* Center: Navigation menu matching reference tabs */}
