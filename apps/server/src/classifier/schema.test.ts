@@ -5,9 +5,18 @@ describe('ClassifierOutputSchema', () => {
   it('accepts a valid signal classification', () => {
     const result = ClassifierOutputSchema.safeParse({
       decision:      'signal',
-      category:      'water',
+      categories:    ['water'],
       hokim_related: false,
       short_label:   'No water for three days',
+    })
+
+    expect(result.success).toBe(true)
+  })
+
+  it('accepts a multi-category signal classification', () => {
+    const result = ClassifierOutputSchema.safeParse({
+      decision:   'signal',
+      categories: ['electricity', 'gas'],
     })
 
     expect(result.success).toBe(true)
@@ -21,9 +30,18 @@ describe('ClassifierOutputSchema', () => {
     expect(result.success).toBe(true)
   })
 
-  it('rejects a signal classification without category', () => {
+  it('rejects a signal classification without categories', () => {
     const result = ClassifierOutputSchema.safeParse({
       decision: 'signal',
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects a signal classification with an empty categories array', () => {
+    const result = ClassifierOutputSchema.safeParse({
+      decision:   'signal',
+      categories: [],
     })
 
     expect(result.success).toBe(false)

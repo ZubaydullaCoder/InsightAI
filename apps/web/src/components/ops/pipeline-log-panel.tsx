@@ -22,15 +22,21 @@ import {
 import type { PipelineEvent } from '../../api/ops.ts'
 
 // ── Event type → AntD Tag color mapping ───────────────────────────────────────
-// Known current event types produced by pipeline.ts:
+// Known current event types produced by intake pipeline and classifier batch:
 //   prefilter_pass → success (green)
 //   keyword_match  → processing (blue)
 //   keyword_skip   → gold (yellow)
+//   classifier_signal → success (green)
+//   classifier_ignore → default (neutral)
+//   classifier_error  → error (red)
 //   unknown future → default (neutral)
 const EVENT_COLOR: Record<string, string> = {
-  prefilter_pass: 'success',
-  keyword_match:  'processing',
-  keyword_skip:   'gold',
+  prefilter_pass:    'success',
+  keyword_match:     'processing',
+  keyword_skip:      'gold',
+  classifier_signal: 'success',
+  classifier_ignore: 'default',
+  classifier_error:  'error',
 }
 
 function formatTime(isoString: string): string {
@@ -237,7 +243,7 @@ function EventLogPanel() {
 
 export function PipelineLogPanel() {
   return (
-    <Space orientation="vertical" style={{ width: '100%' }}>
+    <Space orientation="vertical" style={{ width: '100%' }} size="middle">
       <BatchStatusPanel />
       <EventLogPanel />
     </Space>

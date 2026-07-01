@@ -24,6 +24,7 @@ async function main() {
   const mahallas: Array<{ name: string; chatId: bigint }> = [
     { name: 'Навбаҳор маҳалласи', chatId: -1001000000001n },
     { name: 'Олмазор маҳалласи',  chatId: -1001000000002n },
+    { name: 'Боғистон маҳалласи', chatId: -1001000000003n },
   ]
   for (const { name, chatId } of mahallas) {
     await prisma.mahalla.upsert({
@@ -49,6 +50,42 @@ async function main() {
       district_id:   district.id,
     },
   })
+
+  // 4 — Core Keywords (Latin and Cyrillic pairs)
+  const defaultKeywords = [
+    'gaz', 'газ',
+    'svet', 'свет',
+    'elektr', 'электр',
+    'suv', 'сув',
+    'hokim', 'ҳоким', 'хоким',
+    'musr', 'муср',
+    'musor', 'мусор',
+    'chiqindi', 'чиқинди', 'чикинди',
+    'musir', 'мусир',
+    'rais', 'раис',
+    'rayis', 'райис',
+    'rais buva', 'раис бува',
+    'rayis buva', 'райис бува',
+    'rais bobo', 'раис бобо',
+    'rayis bobo', 'райис бобо'
+  ]
+
+  for (const phrase of defaultKeywords) {
+    await prisma.keyword.upsert({
+      where: {
+        district_id_phrase: {
+          district_id: district.id,
+          phrase,
+        },
+      },
+      update: {},
+      create: {
+        district_id: district.id,
+        phrase,
+        is_active: true,
+      },
+    })
+  }
 
   console.log('Seed complete')
 }

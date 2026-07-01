@@ -60,7 +60,7 @@ describe('classifyMessage', () => {
       latencyMs: 42,
       rawJson:   {
         decision:      'signal',
-        category:      'water',
+        categories:    ['water'],
         hokim_related: false,
         short_label:   'No water',
       },
@@ -70,7 +70,7 @@ describe('classifyMessage', () => {
 
     expect(result).toEqual({
       decision:      'signal',
-      category:      'water',
+      categories:    ['water'],
       hokim_related: false,
       short_label:   'No water',
     })
@@ -123,7 +123,7 @@ describe('classifyMessage', () => {
       latencyMs: 52,
       rawJson:   {
         decision:      'signal',
-        category:      'electricity',
+        categories:    ['electricity'],
         hokim_related: false,
       },
     })
@@ -132,7 +132,7 @@ describe('classifyMessage', () => {
 
     expect(result).toEqual({
       decision:      'signal',
-      category:      'electricity',
+      categories:    ['electricity'],
       hokim_related: false,
     })
     expect(openAiCompatibleProviderMocks.classifyWithOpenAiCompatible).toHaveBeenCalledWith('Elektr yoq')
