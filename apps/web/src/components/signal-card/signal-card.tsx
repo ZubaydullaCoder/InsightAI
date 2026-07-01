@@ -140,22 +140,20 @@ export function SignalCard({ signal, isActive, categoryColor, onClick }: SignalC
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginTop: 2 }}>
-          {signal.isGroup && (
-            <span
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                background: groupBadgeBg,
-                color: groupBadgeColor,
-                border: groupBadgeBorder,
-                padding: '1px 5px',
-                borderRadius: 5,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {signal.groupCount} та сигнал
-            </span>
-          )}
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              background: groupBadgeBg,
+              color: groupBadgeColor,
+              border: groupBadgeBorder,
+              padding: '1px 5px',
+              borderRadius: 5,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {groupCount} та сигнал
+          </span>
           <span
             style={{
               fontSize: 11,
