@@ -181,3 +181,67 @@ signalsRouter.get('/signals/:id/context', async (req, res) => {
     })
   }
 })
+
+signalsRouter.patch('/signals/:id/status', async (req, res) => {
+  const districtId = req.session.districtId
+
+  if (districtId === undefined) {
+    return res.status(401).json({
+      statusCode: 401,
+      error: 'Unauthorized',
+      message: 'Authentication required',
+    })
+  }
+
+  const idStr = req.params['id'] ?? ''
+  const rawId = /^\d+$/.test(idStr) ? parseInt(idStr, 10) : NaN
+  if (!Number.isSafeInteger(rawId) || rawId <= 0) {
+    return res.status(404).json({
+      statusCode: 404,
+      error: 'Not Found',
+      message: 'Signal not found',
+    })
+  }
+
+  const { status } = req.body
+  if (typeof status !== 'string' || !['yangi', 'jarayonda', 'bajarildi', 'tasdiqlandi'].includes(status)) {
+    return res.status(400).json({
+      statusCode: 400,
+      error: 'Bad Request',
+      message: 'Invalid status value',
+    })
+  }
+
+  try {
+    const target = await prisma.signalMessage.findFirst({
+      where: { id: rawId, district_id: districtId },
+    })
+
+    if (!target) {
+      return res.status(404).json({
+        statusCode: 404,
+        error: 'Not Found',
+        message: 'Signal not found',
+      })
+    }
+
+    // Update all signals in the same group (same MFY and category)
+    await prisma.signalMessage.updateMany({
+      where: {
+        district_id: districtId,
+        mahalla_id:  target.mahalla_id,
+        category:    target.category,
+      },
+      data: { status },
+    })
+
+    return res.json({ success: true, status })
+  } catch (err) {
+    logger.error({ err, signalId: rawId }, 'Failed to update signal status')
+    return res.status(500).json({
+      statusCode: 500,
+      error: 'Internal Server Error',
+      message: 'Failed to update signal status',
+    })
+  }
+})

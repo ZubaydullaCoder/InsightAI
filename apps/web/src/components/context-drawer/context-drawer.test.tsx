@@ -19,6 +19,9 @@ const mockUseSignalContext = vi.fn()
 vi.mock('../../api/signals.ts', () => ({
   useSignalContext: (signalId: number | null, params?: { from?: string; to?: string }) =>
     mockUseSignalContext(signalId, params),
+  useUpdateSignalStatus: () => ({
+    mutate: vi.fn(),
+  }),
 }))
 
 // ─── Signal fixture ───────────────────────────────────────────────────────────

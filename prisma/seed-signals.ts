@@ -28,6 +28,7 @@ interface SignalDraft {
   minsAgo:        number        // how many minutes ago
   keyword:        string | null
   shortLabel:     string | null
+  status?:        string
 }
 
 const signals: SignalDraft[] = [
@@ -74,6 +75,7 @@ const signals: SignalDraft[] = [
     text: 'Сув оқими жуда паст, уйимизда 3-қаватга сув умуман кўтарилмаяпти. Муаммони ҳал қилиб беринг.',
     textSource: 'text', mahallaIndex: 0, minsAgo: 5, keyword: 'suv',
     shortLabel: 'Ичимлик суви таъминотида сув босими пастлиги ва узилишлар бўйича норозиликлар кузатилмоқда.',
+    status: 'jarayonda',
   },
   {
     updateIdOffset: 6,
@@ -82,6 +84,7 @@ const signals: SignalDraft[] = [
     text: 'Эрталабдан бери ичимлик суви йўқ. Оғиз суви ҳам келмади. Қачон берилади?',
     textSource: 'text', mahallaIndex: 0, minsAgo: 15, keyword: 'suv',
     shortLabel: 'Ичимлик суви таъминотида сув босими пастлиги ва узилишлар бўйича норозиликлар кузатилмоқда.',
+    status: 'jarayonda',
   },
   {
     updateIdOffset: 8,
@@ -90,6 +93,7 @@ const signals: SignalDraft[] = [
     text: 'Бугун сувнинг таъми ўзгарган, ранги ҳам хирароқ. Ичишга қўрқяпмиз, ҳид бор.',
     textSource: 'text', mahallaIndex: 0, minsAgo: 72, keyword: 'suv',
     shortLabel: 'Ичимлик суви таъминотида сув босими пастлиги ва узилишлар бўйича норозиликлар кузатилмоқда.',
+    status: 'jarayonda',
   },
   // Single water signal in Bogiston
   {
@@ -110,6 +114,7 @@ const signals: SignalDraft[] = [
     text: 'Электр токи тез-тез ўчиб қоляпти. Кундузи ҳам, кечаси ҳам. Техникалар куйиб қолишидан хавотирдамиз.',
     textSource: 'text', mahallaIndex: 1, minsAgo: 12, keyword: 'elektr',
     shortLabel: 'Электр таъминотидаги тез-тез ўчишлар ва кучланишнинг жуда пастлигидан шикоят қилишмоқда.',
+    status: 'bajarildi',
   },
   {
     updateIdOffset: 10,
@@ -118,6 +123,7 @@ const signals: SignalDraft[] = [
     text: 'Маҳалламизда кучланиш жуда паст. Кондиционерлар ва музлатгичлар умуман ишламаяпти.',
     textSource: 'text', mahallaIndex: 1, minsAgo: 32, keyword: 'svet',
     shortLabel: 'Электр таъминотидаги тез-тез ўчишлар ва кучланишнинг жуда пастлигидан шикоят қилишмоқда.',
+    status: 'bajarildi',
   },
   {
     updateIdOffset: 12,
@@ -126,6 +132,7 @@ const signals: SignalDraft[] = [
     text: 'Кечаси соат 22:00 дан кейин узоқ муддатга электр ўчди. Муаммо нимада эканлигини ким билади?',
     textSource: 'text', mahallaIndex: 1, minsAgo: 140, keyword: 'svet',
     shortLabel: 'Электр таъминотидаги тез-тез ўчишлар ва кучланишнинг жуда пастлигидан шикоят қилишмоқда.',
+    status: 'bajarildi',
   },
   // Single electricity signal in Navbahor
   {
@@ -146,6 +153,7 @@ const signals: SignalDraft[] = [
     text: 'Газ босими жуда паст, овқат пишириш умуман имконсиз бўляпти. Иситиш тизими ҳам ишламаяпти.',
     textSource: 'text', mahallaIndex: 2, minsAgo: 9, keyword: 'gaz',
     shortLabel: 'Табиий газ босими пастлиги туфайли иситиш тизими ишламаётгани айтилмоқда.',
+    status: 'tasdiqlandi',
   },
   {
     updateIdOffset: 16,
@@ -154,6 +162,7 @@ const signals: SignalDraft[] = [
     text: 'Суюлтирилган газ баллонлари узоқ вақтдан бери маҳаллага олиб келинмади. Таъминот тўхтаб қолган.',
     textSource: 'text', mahallaIndex: 2, minsAgo: 115, keyword: 'gaz',
     shortLabel: 'Табиий газ босими пастлиги туфайли иситиш тизими ишламаётгани айтилмоқда.',
+    status: 'tasdiqlandi',
   },
   // Single gas signals in Navbahor and Olmazor
   {
@@ -274,6 +283,7 @@ async function main() {
           keyword_matched:     s.keyword !== null,
           matched_keyword:     s.keyword,
           short_label:         s.shortLabel,
+          status:              s.status ?? 'yangi',
           classified_at:       new Date(ts.getTime() + 5_000), // 5s after message
         },
       })

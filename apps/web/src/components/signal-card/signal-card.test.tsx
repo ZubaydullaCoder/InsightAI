@@ -27,6 +27,7 @@ const baseSignal: Signal = {
   matchedKeyword: 'gaz',
   shortLabel: null,
   classifiedAt: new Date().toISOString(),
+  status: 'jarayonda',
 }
 
 const renderCard = (props: Partial<Parameters<typeof SignalCard>[0]> = {}) => {

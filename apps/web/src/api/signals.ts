@@ -2,7 +2,7 @@
 // Intentional frontend API-boundary mirror of apps/server/src/shared/types.ts
 // DO NOT import server source into apps/web
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 export interface Signal {
   id:                 number
@@ -23,6 +23,7 @@ export interface Signal {
   matchedKeyword:     string | null
   shortLabel:         string | null
   classifiedAt:       string    // ISO 8601 UTC
+  status:             string
   isGroup?:           boolean
   groupCount?:        number
 }
@@ -89,5 +90,32 @@ export function useSignalContext(
     queryFn:  () => fetchSignalContext(signalId!, params),
     enabled:  signalId !== null,
     // No refetchInterval — drawer context is fetched on demand only
+  })
+}
+
+async function updateSignalStatus(signalId: number, status: string): Promise<{ success: boolean; status: string }> {
+  const res = await fetch(`/api/signals/${signalId}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+    credentials: 'same-origin',
+  })
+
+  if (!res.ok) {
+    throw new Error(`PATCH /api/signals/${signalId}/status failed: ${res.status}`)
+  }
+
+  return res.json() as Promise<{ success: boolean; status: string }>
+}
+
+export function useUpdateSignalStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ signalId, status }: { signalId: number; status: string }) =>
+      updateSignalStatus(signalId, status),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['signals'] })
+      qc.invalidateQueries({ queryKey: ['signal-context'] })
+    },
   })
 }
