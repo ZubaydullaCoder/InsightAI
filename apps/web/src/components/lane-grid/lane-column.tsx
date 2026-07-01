@@ -3,7 +3,8 @@ import { useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { theme, Badge } from 'antd'
 import { strings } from '../../strings.ts'
-import { CATEGORY_COLORS } from '../../theme.ts'
+import { CATEGORY_COLORS, CATEGORY_LIGHT_COLORS } from '../../theme.ts'
+import { CategoryIcon } from '../category-icon.tsx'
 import { SignalCard } from '../signal-card/signal-card.tsx'
 import type { Signal } from '../../api/signals.ts'
 
@@ -89,13 +90,16 @@ export function LaneColumn({ laneKey, signals, activeSignalId, onCardClick, isKe
   const laneLabel = getLaneLabel(laneKey)
   const useVirtual = signals.length > VIRTUALIZE_THRESHOLD
 
+  const iconColor = CATEGORY_COLORS[laneKey]
+  const iconBg = CATEGORY_LIGHT_COLORS[laneKey]
+
   return (
     <div
       className="lane-column"
       role="feed"
       aria-label={laneLabel}
     >
-      {/* Sticky header */}
+      {/* Sticky header — icon chip + title + badge (matches reference col-header) */}
       <div
         style={{
           position: 'sticky',
@@ -103,13 +107,31 @@ export function LaneColumn({ laneKey, signals, activeSignalId, onCardClick, isKe
           zIndex: 1,
           background: token.colorBgContainer,
           borderBottom: `1px solid ${token.colorBorder}`,
-          padding: '10px 14px',
+          padding: '12px 14px 10px',
           display: 'flex',
           alignItems: 'center',
           gap: 8,
+          borderRadius: '12px 12px 0 0', // match parent card radius at top
         }}
       >
-        <span style={{ fontWeight: 600, fontSize: 13, color: token.colorText }}>
+        {/* Colored icon chip — 28×28px, per reference .col-icon */}
+        <div
+          aria-hidden="true"
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 6,
+            background: iconBg,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <CategoryIcon category={laneKey} color={iconColor} />
+        </div>
+
+        <span style={{ fontWeight: 600, fontSize: 13, color: token.colorText, flex: 1 }}>
           {laneLabel}
         </span>
         <Badge count={signals.length} showZero style={{ backgroundColor: token.colorPrimary }} />

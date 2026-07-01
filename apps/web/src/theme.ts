@@ -2,31 +2,49 @@ import type { ThemeConfig } from 'antd'
 
 export const mahallaTheme: ThemeConfig = {
   token: {
-    colorPrimary: '#4F46A8',
-    colorBgContainer: '#FAFAF9',
-    colorBgLayout: '#F5F4F2',
+    // Primary: reference blue
+    colorPrimary: '#2563EB',
+    // Backgrounds
+    colorBgContainer: '#FFFFFF',
+    colorBgLayout: '#F1F5F9',
     colorBgElevated: '#FFFFFF',
-    colorBorder: '#E8E5E1',
-    colorBorderSecondary: '#D1CEC9',
-    colorText: '#1A1714',
-    colorTextSecondary: '#6B6560',
-    colorTextPlaceholder: '#A09990',
-    colorWarning: '#D97706',
+    // Borders
+    colorBorder: '#E2E8F0',
+    colorBorderSecondary: '#CBD5E1',
+    // Text
+    colorText: '#1E293B',
+    colorTextSecondary: '#64748B',
+    colorTextPlaceholder: '#94A3B8',
+    // Semantic
+    colorWarning: '#F59E0B',
     colorSuccess: '#16A34A',
-    // colorError (#DC2626) is reserved — not used in any MVP hokim-facing element.
-    // It is safe to set it; do NOT use it in UI components.
     colorError: '#DC2626',
+    // Typography
     fontFamily: "'Inter', 'Outfit', sans-serif",
-    borderRadius: 8,
+    // Geometry — softer rounded corners
+    borderRadius: 10,
+    // Shadows
+    boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05)',
+    boxShadowSecondary: '0 4px 12px rgba(0,0,0,0.10), 0 2px 6px rgba(0,0,0,0.06)',
   },
 }
 
 export type CategoryKey = 'hokim' | 'water' | 'electricity' | 'gas' | 'waste'
 
+// Category accent colors — aligned with reference design palette
 export const CATEGORY_COLORS: Record<CategoryKey, string> = {
-  hokim: '#7C2D56', // Deep raspberry
-  water: '#1D6FA4', // Slate blue
-  electricity: '#B45309', // Warm amber
-  gas: '#1A7060', // Teal green
-  waste: '#5C6B2E', // Earthy olive
+  hokim:       '#7C3AED', // Purple-violet (matches reference hokim icon purple)
+  water:       '#2563EB', // Reference blue — Suv lane
+  electricity: '#F59E0B', // Reference amber/yellow — Elektr lane
+  gas:         '#7C3AED', // Reference purple — Gaz lane
+  waste:       '#16A34A', // Reference green — Chiqindi lane
+} as const
+
+// Lighter tint backgrounds for lane icon chips (matches reference col-icon palette)
+export const CATEGORY_LIGHT_COLORS: Record<CategoryKey, string> = {
+  hokim:       '#F5F3FF', // purple-lt
+  water:       '#EFF6FF', // blue-lt
+  electricity: '#FFFBEB', // yellow-lt
+  gas:         '#F5F3FF', // purple-lt
+  waste:       '#F0FDF4', // green-lt
 } as const

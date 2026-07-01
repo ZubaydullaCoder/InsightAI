@@ -22,7 +22,7 @@ export function KeywordSearch({ value, onChange, onClear }: KeywordSearchProps) 
         if (info?.source === 'clear') onClear()
       }}
       enterButton={false}
-      style={{ width: 200 }}
+      className="filter-keyword-search"
     />
   )
 }

@@ -15,7 +15,7 @@ export function MahallaSelect({ value, onSelect, mahallas }: MahallaSelectProps)
 
   return (
     <Select
-      style={{ width: 180 }}
+      className="filter-mahalla-select"
       placeholder={strings.filterBar.allMahallas}
       allowClear
       options={options}
