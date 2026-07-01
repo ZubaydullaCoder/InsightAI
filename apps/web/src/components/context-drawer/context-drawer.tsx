@@ -154,6 +154,30 @@ export function ContextDrawer({
         <Skeleton active paragraph={{ rows: 3 }} />
       ) : (
         <>
+          {/* Info Banner showing that these are raw messages from residents */}
+          <div
+            style={{
+              background: '#F8FAFC',
+              border: '1px solid #E2E8F0',
+              borderRadius: 10,
+              padding: '10px 12px',
+              marginBottom: 14,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <span style={{ fontSize: 16 }}>💬</span>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: '#475569', lineHeight: 1.3 }}>
+                Мурожаатлар рўйхати (Ҳақиқий хабарлар)
+              </span>
+              <span style={{ fontSize: 10.5, fontWeight: 500, color: '#64748B', lineHeight: 1.3, marginTop: 1 }}>
+                Ушбу тизимли муаммо доирасида маҳалла аҳолиси (резидентлар) томонидан юборилган барча асл мурожаатлар рўйхати.
+              </span>
+            </div>
+          </div>
+
           {/* Context signals in ascending chronological order — oldest at top (AC-3) */}
           {contextSignals.map((signal) => (
             <div
