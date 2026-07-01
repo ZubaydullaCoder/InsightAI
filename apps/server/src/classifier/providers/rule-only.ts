@@ -62,7 +62,7 @@ export async function classifyWithRuleOnly(text: string): Promise<ProviderRawRes
       decision:      'signal',
       categories:    [matchedRule.category],
       hokim_related: hokimRelated,
-      short_label:   matchedRule.shortLabel,
+      classify_reason: matchedRule.shortLabel,
     },
   }
 }

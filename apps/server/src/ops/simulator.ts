@@ -30,14 +30,26 @@ async function initializeSimulatedIdCounter(): Promise<void> {
   }
 
   simulatedCounterInitPromise ??= (async () => {
-    const existing = await prisma.rawMessage.findFirst({
-      where:   { telegram_update_id: { lt: 0 } },
-      orderBy: { telegram_update_id: 'asc' },
-      select:  { telegram_update_id: true },
-    })
+    const [existingRaw, existingSignal] = await Promise.all([
+      prisma.rawMessage.findFirst({
+        where:   { telegram_update_id: { lt: 0 } },
+        orderBy: { telegram_update_id: 'asc' },
+        select:  { telegram_update_id: true },
+      }),
+      prisma.signalMessage.findFirst({
+        where:   { telegram_update_id: { lt: 0 } },
+        orderBy: { telegram_update_id: 'asc' },
+        select:  { telegram_update_id: true },
+      }),
+    ])
 
-    if (existing) {
-      simulatedUpdateIdCounter = Math.min(simulatedUpdateIdCounter, existing.telegram_update_id - 1)
+    const lowestExistingId = Math.min(
+      existingRaw?.telegram_update_id ?? 0,
+      existingSignal?.telegram_update_id ?? 0,
+    )
+
+    if (lowestExistingId < 0) {
+      simulatedUpdateIdCounter = Math.min(simulatedUpdateIdCounter, lowestExistingId - 1)
     }
 
     simulatedCounterInitialized = true

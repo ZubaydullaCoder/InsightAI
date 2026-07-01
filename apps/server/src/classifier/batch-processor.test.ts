@@ -97,10 +97,10 @@ const rawMessage = {
 
 function signalOutput(overrides: Partial<ClassifierOutput> = {}): ClassifierOutput {
   return {
-    decision:      'signal',
-    categories:    ['water'],
-    hokim_related: false,
-    short_label:   'Water outage',
+    decision:        'signal',
+    categories:      ['water'],
+    hokim_related:   false,
+    classify_reason: 'direct water outage complaint',
     ...overrides,
   } as ClassifierOutput
 }
@@ -155,7 +155,7 @@ describe('classifyBatch', () => {
         hokim_related:       false,
         keyword_matched:     true,
         matched_keyword:     'suv',
-        short_label:         'Water outage',
+        short_label:         'direct water outage complaint',
       }),
     })
     expect(prismaMocks.transaction).toHaveBeenCalledWith(expect.any(Function))
@@ -172,7 +172,32 @@ describe('classifyBatch', () => {
           categories:  ['water'],
           rawMessageId: rawMessage.id,
           signalId:    20,
+          signalsWritten: 1,
           textSnippet: rawMessage.text,
+        }),
+      }),
+    })
+  })
+
+  it('records zero written signals when an accepted result only matches existing categories', async () => {
+    aiMocks.classifyMessage.mockResolvedValue(signalOutput())
+    prismaMocks.signalMessageFindMany.mockResolvedValue([{ category: 'water', id: 20 }])
+
+    const result = await classifyBatch(1)
+
+    expect(result.status).toBe('ok')
+    expect(result.signals_written).toBe(0)
+    expect(prismaMocks.signalMessageCreate).not.toHaveBeenCalled()
+    expect(prismaMocks.rawMessageDelete).toHaveBeenCalledWith({ where: { id: rawMessage.id } })
+    expect(prismaMocks.pipelineEventCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        event_type:     'classifier_signal',
+        raw_message_id: rawMessage.id,
+        signal_id:      20,
+        detail:         expect.objectContaining({
+          decision:       'signal',
+          signalId:       20,
+          signalsWritten: 0,
         }),
       }),
     })
@@ -302,6 +327,18 @@ describe('classifyBatch', () => {
     expect(result.status).toBe('ok')
     expect(result.signals_written).toBe(0)
     expect(prismaMocks.rawMessageDelete).toHaveBeenLastCalledWith({ where: { id: rawMessage.id } })
+    expect(prismaMocks.pipelineEventCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        event_type:     'classifier_signal',
+        raw_message_id: rawMessage.id,
+        signal_id:      null,
+        detail:         expect.objectContaining({
+          decision:       'signal',
+          signalId:       null,
+          signalsWritten: 0,
+        }),
+      }),
+    })
   })
 
   it('writes batch health fields at completion', async () => {

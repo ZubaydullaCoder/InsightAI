@@ -72,10 +72,11 @@ export async function classifyBatch(
             rawMessage,
             signalId:  persistResult.lastSignalId,
             detail:    {
-              decision:      'signal',
-              categories:    aiResult.categories,
-              hokimRelated:  aiResult.hokim_related ?? false,
-              shortLabel:    aiResult.short_label ?? null,
+              decision:       'signal',
+              categories:     aiResult.categories,
+              signalsWritten: persistResult.signalsWritten,
+              hokimRelated:   aiResult.hokim_related ?? false,
+              classifyReason: aiResult.classify_reason ?? null,
             },
           })
         } else {
@@ -85,7 +86,10 @@ export async function classifyBatch(
             eventType: 'classifier_ignore',
             rawMessage,
             signalId:  null,
-            detail:    { decision: 'ignore' },
+            detail:    {
+              decision:       'ignore',
+              classifyReason: aiResult.classify_reason ?? null,
+            },
           })
         }
       } catch (err) {

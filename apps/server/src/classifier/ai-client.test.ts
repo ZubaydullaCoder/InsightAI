@@ -62,7 +62,7 @@ describe('classifyMessage', () => {
         decision:      'signal',
         categories:    ['water'],
         hokim_related: false,
-        short_label:   'No water',
+        classify_reason:   'No water',
       },
     })
 
@@ -72,7 +72,7 @@ describe('classifyMessage', () => {
       decision:      'signal',
       categories:    ['water'],
       hokim_related: false,
-      short_label:   'No water',
+      classify_reason:   'No water',
     })
     expect(geminiProviderMocks.classifyWithGemini).toHaveBeenCalledWith('Suv yoq')
     expect(loggerMocks.info).toHaveBeenCalledWith(
