@@ -12,7 +12,8 @@ const prisma = new PrismaClient({ adapter })
 
 // UTC+5 "now" helpers
 const now = new Date()
-const minutesAgo = (n: number) => new Date(now.getTime() - n * 60_000)
+// Shift mock data to yesterday (adding 25 hours) so that today's view is clean for presentation injections
+const minutesAgo = (n: number) => new Date(now.getTime() - (n + 25 * 60) * 60_000)
 
 type Category = 'water' | 'electricity' | 'gas' | 'waste'
 
