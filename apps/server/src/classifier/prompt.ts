@@ -99,17 +99,17 @@ If signal:
 "decision": "signal",
 "categories": ["water" | "electricity" | "gas" | "waste"],
 "hokim_related": boolean,
-"classify_reason": "why this message qualifies as a civic signal (under 80 characters)"
+"classify_reason": "concise report-style description of the problem in Uzbek (under 120 characters)"
 }
 
-The classify_reason for signal must explain what triggered the classification, not just restate the message.
-For tricky or indirect messages, explain the reasoning explicitly. Examples:
-* "rhetorical frustration implies gas outage"
-* "indirect complaint: can't cook implies gas issue"
-* "sarcastic question signals electricity outage"
-* "thanks for restoring water — positive service signal"
-* "weak pressure complaint clearly about water supply"
-* "resident asks if gas will be restored today"
+The classify_reason for signal must be a concise, report-style summary of the problem in Uzbek. It must follow a structured report layout ending in formal Uzbek reporting verbs such as "кузатилмоқда" (is being observed), "айтилмоқда" (it is being reported), "шикоят қилишмоқда" (they are complaining), or "хабар қилинмоқда" (it is being reported). Do NOT write this in English.
+
+Examples of correct classify_reason:
+* "Ичимлик суви таъминотида сув босими пастлиги ва узилишлар бўйича норозиликлар кузатилмоқда."
+* "Электр таъминотидаги тез-тез ўчишлар ва кучланишнинг жуда пастлигидан шикоят қилишмоқда."
+* "Табиий газ босими пастлиги туфайли иситиш тизими ишламаётгани айтилмоқда."
+* "Маҳаллада маиший чиқиндиларни ташиб кетиш графиги бузилаётгани кузатилмоқда."
+* "Трансформатор яқинида учқун чиқиб, авариявий хавфли ҳолат юзага келгани айтилмоқда."
 
 Return only JSON matching the provided schema. Do not include explanations, rationale, markdown, or extra text.
 

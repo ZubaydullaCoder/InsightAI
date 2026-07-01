@@ -107,23 +107,39 @@ export function SignalCard({ signal, isActive, categoryColor, onClick }: SignalC
       <span style={{ display: 'none' }}>{timestamp}</span>
 
       {/* Row 1: location + clock time */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <span
-          style={{
-            fontSize: 11.5,
-            fontWeight: 500,
-            color: '#64748B',
-            lineHeight: 1.4,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            flex: 1,
-            marginRight: 6,
-          }}
-        >
-          {locationLabel}
-        </span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+      {/* Row 1: location column + clock time/badge actions */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+        {/* Location Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, marginRight: 6 }}>
+          <span
+            style={{
+              fontSize: 10.5,
+              fontWeight: 500,
+              color: '#94A3B8',
+              lineHeight: 1.2,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {districtName}
+          </span>
+          <span
+            style={{
+              fontSize: 12.5,
+              fontWeight: 700,
+              color: '#475569',
+              lineHeight: 1.3,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              marginTop: 2,
+            }}
+          >
+            {mahallaLabel}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginTop: 2 }}>
           {signal.isGroup && (
             <span
               style={{

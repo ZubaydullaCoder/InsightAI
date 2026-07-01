@@ -39,14 +39,18 @@ function collapseSignalsIntoGroups(signals: Signal[]): Signal[] {
 
   const result: Signal[] = []
   for (const key of Object.keys(groups)) {
-    const groupList = groups[key]
+    const groupList = groups[key]!
     if (groupList.length === 1) {
-      result.push(groupList[0])
+      const single = groupList[0]!
+      result.push({
+        ...single,
+        rawText: single.shortLabel || single.rawText,
+      })
     } else {
       const sorted = [...groupList].sort(
         (a, b) => new Date(b.telegramTimestamp).getTime() - new Date(a.telegramTimestamp).getTime()
       )
-      const latest = sorted[0]
+      const latest = sorted[0]!
       const grouped: Signal = {
         ...latest,
         isGroup: true,
