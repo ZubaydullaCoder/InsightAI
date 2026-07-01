@@ -27,7 +27,6 @@ export async function persistSignals(
     hokim_related:       aiResult.hokim_related ?? false,
     keyword_matched:     rawMessage.keyword_matched,
     matched_keyword:     rawMessage.matched_keyword,
-    short_label:         aiResult.classify_reason ?? null,
     classified_at:       new Date(),
   }
 
@@ -47,10 +46,14 @@ export async function persistSignals(
 
       for (const category of categories) {
         if (!existingCategories.has(category)) {
+          const categorySpecificReason = aiResult.category_reasons?.find((cr) => cr.category === category)?.reason
+          const short_label = categorySpecificReason || aiResult.classify_reason || null
+
           const created = await tx.signalMessage.create({
             data: {
               ...baseSignalRow,
               category,
+              short_label,
             },
           })
           lastSignalId = created.id

@@ -36,6 +36,9 @@ const mockUseSignals = vi.hoisted(() => vi.fn())
 
 vi.mock('../api/signals.ts', () => ({
   useSignals: (params: SignalsQueryParams | undefined) => mockUseSignals(params),
+  useUpdateSignalStatus: () => ({
+    mutate: vi.fn(),
+  }),
 }))
 
 vi.mock('../api/health.ts', () => ({

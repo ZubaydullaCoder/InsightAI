@@ -99,17 +99,26 @@ If signal:
 "decision": "signal",
 "categories": ["water" | "electricity" | "gas" | "waste"],
 "hokim_related": boolean,
-"classify_reason": "concise report-style description of the problem in Uzbek (under 120 characters)"
+"classify_reason": "concise report-style description of the overall problem in Uzbek (under 120 characters)",
+"category_reasons": [
+  {
+    "category": "water" | "electricity" | "gas" | "waste",
+    "reason": "category-specific Uzbek description of the problem (under 120 characters)"
+  }
+]
 }
 
-The classify_reason for signal must be a concise, report-style summary of the problem in Uzbek. It must follow a structured report layout ending in formal Uzbek reporting verbs such as "кузатилмоқда" (is being observed), "айтилмоқда" (it is being reported), "шикоят қилишмоқда" (they are complaining), or "хабар қилинмоқда" (it is being reported). Do NOT write this in English.
+The classify_reason for signal must be a concise, report-style summary of the overall problem in Uzbek. It must follow a structured report layout ending in formal Uzbek reporting verbs such as "кузатилмоқда" (is being observed), "айтилмоқда" (it is being reported), "шикоят қилишмоқда" (they are complaining), or "хабар қилинмоқда" (it is being reported). Do NOT write this in English.
 
-Examples of correct classify_reason:
-* "Ичимлик суви таъминотида сув босими пастлиги ва узилишлар бўйича норозиликлар кузатилмоқда."
-* "Электр таъминотидаги тез-тез ўчишлар ва кучланишнинг жуда пастлигидан шикоят қилишмоқда."
-* "Табиий газ босими пастлиги туфайли иситиш тизими ишламаётгани айтилмоқда."
-* "Маҳаллада маиший чиқиндиларни ташиб кетиш графиги бузилаётгани кузатилмоқда."
-* "Трансформатор яқинида учқун чиқиб, авариявий хавфли ҳолат юзага келгани айтилмоқда."
+If there are multiple categories in "categories", you MUST also populate the "category_reasons" array. Provide exactly one entry for each category listed. Each entry's "reason" must focus strictly and exclusively on the issue of that category, without mentioning details of the other categories.
+
+Examples of correct classify_reason and category_reasons for a multi-category message (e.g., electricity and water issue):
+* Overall classify_reason: "Электр таъминотидаги кучланиш пастлиги ва сув босими билан боғлиқ муаммолар кузатилмоқда."
+* category_reasons:
+  [
+    { "category": "electricity", "reason": "Электр таъминотида кучланиш жуда пастлиги кузатилмоқда." },
+    { "category": "water", "reason": "Ичимлик суви таъминотида сув босими пастлиги айтилмоқда." }
+  ]
 
 Return only JSON matching the provided schema. Do not include explanations, rationale, markdown, or extra text.
 

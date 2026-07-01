@@ -27,18 +27,18 @@ function formatClockTime(isoString: string): string {
   return `${hh}:${mm}`
 }
 
-function getStatusDetails(id: number): { text: string; color: string; bg: string; activeBg: string } {
-  const mod = id % 4
-  switch (mod) {
-    case 0:
-      return { text: 'Янги', color: '#2563EB', bg: '#2563EB08', activeBg: '#2563EB1A' }
-    case 1:
+function getStatusDetails(statusStr: string): { text: string; color: string; bg: string; activeBg: string } {
+  const norm = (statusStr ?? 'yangi').toLowerCase()
+  switch (norm) {
+    case 'jarayonda':
       return { text: 'Жараёнда', color: '#EA580C', bg: '#EA580C08', activeBg: '#EA580C1A' }
-    case 2:
+    case 'bajarildi':
       return { text: 'Бажарилди', color: '#0D9488', bg: '#0D948808', activeBg: '#0D94881A' }
-    case 3:
-    default:
+    case 'tasdiqlandi':
       return { text: 'Тасдиқланди', color: '#16A34A', bg: '#16A34A08', activeBg: '#16A34A1A' }
+    case 'yangi':
+    default:
+      return { text: 'Янги', color: '#2563EB', bg: '#2563EB08', activeBg: '#2563EB1A' }
   }
 }
 
@@ -54,8 +54,7 @@ export function DrawerSignalCard({ signal, isActive, categoryColor, anchorId }: 
   const mahallaLabel = formatMahallaLabel(signal.mahallaName)
   const districtName = DISTRICT_NAMES[signal.districtId] ?? 'Юнусобод тумани'
 
-  const statusId = anchorId !== undefined ? anchorId : signal.id
-  const status = getStatusDetails(statusId)
+  const status = getStatusDetails(signal.status)
   const confidence = getAiConfidence(signal.id)
 
   const bgColor = isActive ? status.activeBg : status.bg

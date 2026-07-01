@@ -163,7 +163,7 @@ describe('GET /api/signals', () => {
 
     expect(res.status).toBe(200)
     expect(mockGetTodayUTC5Range).toHaveBeenCalledOnce()
-    expect(mockQuerySignals).toHaveBeenCalledWith(SESSION_DISTRICT_ID, MOCK_RANGE.from, MOCK_RANGE.to)
+    expect(mockQuerySignals).toHaveBeenCalledWith(SESSION_DISTRICT_ID, MOCK_RANGE.from, MOCK_RANGE.to, undefined)
     expect(res.body).toEqual([MOCK_SIGNAL])
   })
 
@@ -184,6 +184,7 @@ describe('GET /api/signals', () => {
       SESSION_DISTRICT_ID,
       new Date(from),
       new Date(to),
+      undefined,
     )
   })
 
@@ -197,7 +198,7 @@ describe('GET /api/signals', () => {
 
     expect(res.status).toBe(200)
     // querySignals must be called with the session districtId, not the injected value
-    expect(mockQuerySignals).toHaveBeenCalledWith(SESSION_DISTRICT_ID, expect.any(Date), expect.any(Date))
+    expect(mockQuerySignals).toHaveBeenCalledWith(SESSION_DISTRICT_ID, expect.any(Date), expect.any(Date), undefined)
   })
 
   it('ignores districtId in request body; uses only req.session.districtId', async () => {
@@ -206,7 +207,7 @@ describe('GET /api/signals', () => {
 
     const res = await agent.get('/api/signals').send({ districtId: 999 })
 
-    expect(mockQuerySignals).toHaveBeenCalledWith(SESSION_DISTRICT_ID, expect.any(Date), expect.any(Date))
+    expect(mockQuerySignals).toHaveBeenCalledWith(SESSION_DISTRICT_ID, expect.any(Date), expect.any(Date), undefined)
     expect(res.status).toBe(200)
   })
 

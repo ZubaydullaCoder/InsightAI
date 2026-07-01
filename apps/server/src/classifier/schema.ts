@@ -2,6 +2,11 @@ import { z } from 'zod/v3'
 
 export const CategorySchema = z.enum(['water', 'electricity', 'gas', 'waste'])
 
+export const CategoryReasonSchema = z.object({
+  category: CategorySchema,
+  reason: z.string().max(120),
+})
+
 export const ClassifierOutputSchema = z.discriminatedUnion('decision', [
   z.object({
     decision:      z.literal('signal'),
@@ -11,6 +16,7 @@ export const ClassifierOutputSchema = z.discriminatedUnion('decision', [
     categories:    z.array(CategorySchema).min(1).max(4),
     hokim_related:    z.boolean().optional(),
     classify_reason:  z.string().max(200).optional(),
+    category_reasons: z.array(CategoryReasonSchema).optional(),
   }),
   z.object({
     decision:      z.literal('ignore'),

@@ -4,6 +4,7 @@ import { AppShell } from '../components/app-shell.tsx'
 import { UnsupportedScreen } from '../components/unsupported-screen.tsx'
 import { LaneGrid, type SignalsByCategory } from '../components/lane-grid/lane-grid.tsx'
 import { useSignals, type Signal } from '../api/signals.ts'
+import { useSession } from '../api/auth.ts'
 import { useHealth } from '../api/health.ts'
 import { DelayBanner } from '../components/delay-banner.tsx'
 import { FilterBar } from '../components/filter-bar/filter-bar.tsx'
@@ -89,6 +90,7 @@ function groupSignals(signals: Signal[]): SignalsByCategory {
 }
 
 export function DashboardPage() {
+  const { data: session } = useSession()
   const {
     filterState,
     setTimeRange,
@@ -195,6 +197,7 @@ export function DashboardPage() {
                 onCardClick={openDrawer}
                 isKeywordSearch={isKeywordActive}
                 isDrawerOpen={isDrawerOpen}
+                userRole={session?.role}
               />
             </div>
           </div>
@@ -208,6 +211,7 @@ export function DashboardPage() {
         onClose={closeDrawer}
         onAfterOpenChange={handleDrawerAfterOpenChange}
         contextParams={computedApiParams}
+        userRole={session?.role}
       />
       <UnsupportedScreen />
     </>

@@ -16,14 +16,14 @@ function rejectSession(req: Request, res: Response): void {
   })
 }
 
-export async function getAuthenticatedSession(req: Request): Promise<{ userId: number; districtId: number } | null> {
+export async function getAuthenticatedSession(req: Request): Promise<{ userId: number; districtId: number; role: string } | null> {
   if (!req.session.userId || !req.session.districtId) {
     return null
   }
 
   const user = await prisma.user.findUnique({
     where:  { id: req.session.userId },
-    select: { id: true, district_id: true, is_active: true },
+    select: { id: true, district_id: true, is_active: true, role: true },
   })
 
   if (!user || !user.is_active || user.district_id !== req.session.districtId) {
@@ -33,6 +33,7 @@ export async function getAuthenticatedSession(req: Request): Promise<{ userId: n
   return {
     userId:     user.id,
     districtId: user.district_id,
+    role:       user.role,
   }
 }
 
@@ -52,6 +53,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
     req.session.userId = session.userId
     req.session.districtId = session.districtId
+    req.session.role = session.role
 
     next()
   } catch (err) {

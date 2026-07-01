@@ -22,6 +22,20 @@ describe('ClassifierOutputSchema', () => {
     expect(result.success).toBe(true)
   })
 
+  it('accepts a signal classification with category_reasons', () => {
+    const result = ClassifierOutputSchema.safeParse({
+      decision:      'signal',
+      categories:    ['water', 'electricity'],
+      classify_reason:   'No water and light',
+      category_reasons: [
+        { category: 'water', reason: 'No water' },
+        { category: 'electricity', reason: 'No electricity' },
+      ],
+    })
+
+    expect(result.success).toBe(true)
+  })
+
   it('accepts a valid ignore classification', () => {
     const result = ClassifierOutputSchema.safeParse({
       decision: 'ignore',

@@ -3,7 +3,7 @@
 // DO NOT: push mode, global Escape listener, destroyOnClose, refetchInterval.
 import { useRef, useEffect } from 'react'
 import { Drawer, Skeleton, theme } from 'antd'
-import { useSignalContext } from '../../api/signals.ts'
+import { useSignalContext, useUpdateSignalStatus } from '../../api/signals.ts'
 import { DrawerSignalCard } from './drawer-signal-card.tsx'
 import { CATEGORY_COLORS, CATEGORY_LIGHT_COLORS } from '../../theme.ts'
 import { CategoryIcon } from '../category-icon.tsx'
@@ -44,6 +44,7 @@ export interface ContextDrawerProps {
   onClose: () => void
   onAfterOpenChange?: (open: boolean) => void
   contextParams?: { from?: string; to?: string }
+  userRole?: string
 }
 
 export function ContextDrawer({
@@ -53,6 +54,7 @@ export function ContextDrawer({
   onClose,
   onAfterOpenChange,
   contextParams,
+  userRole,
 }: ContextDrawerProps) {
   const { token } = theme.useToken()
   const anchorRef = useRef<HTMLDivElement | null>(null)
@@ -62,6 +64,14 @@ export function ContextDrawer({
     anchorSignal?.id ?? null,
     contextParams,
   )
+
+  const updateStatusMutation = useUpdateSignalStatus()
+
+  const handleStatusChange = (status: string) => {
+    if (anchorSignal) {
+      updateStatusMutation.mutate({ signalId: anchorSignal.id, status })
+    }
+  }
 
   // Scroll anchor to center when context data loads (AC-4)
   useEffect(() => {
@@ -176,6 +186,71 @@ export function ContextDrawer({
                 Ушбу тизимли муаммо доирасида маҳалла аҳолиси (резидентлар) томонидан юборилган барча асл мурожаатлар рўйхати.
               </span>
             </div>
+          </div>
+
+          {/* Status Transition Control */}
+          <div
+            style={{
+              background: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              borderRadius: 12,
+              padding: '12px',
+              marginBottom: 16,
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#475569', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Муаммо ҳолатини ўзгартириш:
+            </div>
+            {(() => {
+              const isAuthorized = userRole === anchorSignal?.category
+              const explanationMessage = userRole === 'hokim'
+                ? strings.drawer.statusDisabledForHokim
+                : strings.drawer.statusDisabledForOtherUtility
+
+              return (
+                <>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {[
+                      { value: 'yangi', label: 'Янги', color: '#2563EB' },
+                      { value: 'jarayonda', label: 'Жараёнда', color: '#EA580C' },
+                      { value: 'bajarildi', label: 'Бажарилди', color: '#0D9488' },
+                      { value: 'tasdiqlandi', label: 'Тасдиқланди', color: '#16A34A' },
+                    ].map((opt) => {
+                      const currentStatus = contextSignals.find(s => s.id === anchorSignal?.id)?.status ?? anchorSignal?.status ?? 'yangi'
+                      const isSelected = currentStatus.toLowerCase() === opt.value.toLowerCase()
+                      return (
+                        <button
+                          key={opt.value}
+                          onClick={() => isAuthorized && handleStatusChange(opt.value)}
+                          disabled={!isAuthorized}
+                          style={{
+                            flex: 1,
+                            padding: '8px 4px',
+                            borderRadius: 8,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            border: isSelected ? `1.5px solid ${opt.color}` : '1.5px solid #E2E8F0',
+                            background: isSelected ? `${opt.color}0E` : '#FFFFFF',
+                            color: isSelected ? opt.color : '#64748B',
+                            cursor: isAuthorized ? 'pointer' : 'not-allowed',
+                            opacity: isAuthorized ? 1 : 0.6,
+                            transition: 'all 0.15s ease',
+                            textAlign: 'center',
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {!isAuthorized && (
+                    <div style={{ fontSize: 10.5, color: '#EF4444', fontWeight: 600, marginTop: 8, lineHeight: 1.3 }}>
+                      ℹ️ {explanationMessage}
+                    </div>
+                  )}
+                </>
+              )
+            })()}
           </div>
 
           {/* Context signals in ascending chronological order — oldest at top (AC-3) */}

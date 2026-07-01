@@ -12,6 +12,7 @@ export interface CurrentSessionResponse {
   authenticated: true
   userId:        number
   districtId:    number
+  role:          string
 }
 
 export interface ApiErrorResponse {

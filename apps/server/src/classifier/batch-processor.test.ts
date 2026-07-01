@@ -383,6 +383,37 @@ describe('classifyBatch', () => {
       expect.objectContaining({ take: 25 }),
     )
   })
+
+  it('splits multi-category signals with category-specific reasons', async () => {
+    aiMocks.classifyMessage.mockResolvedValue({
+      decision:      'signal',
+      categories:    ['water', 'electricity'],
+      hokim_related: false,
+      classify_reason: 'Overall utility issues',
+      category_reasons: [
+        { category: 'water', reason: 'Water pressure is low' },
+        { category: 'electricity', reason: 'Power voltage is low' },
+      ],
+    })
+
+    const createdSignals: Record<string, unknown>[] = []
+    prismaMocks.signalMessageCreate.mockImplementation((args: { data: Record<string, unknown> }) => {
+      createdSignals.push(args.data)
+      return Promise.resolve({ id: createdSignals.length, ...args.data })
+    })
+
+    const result = await classifyBatch(1)
+
+    expect(result.status).toBe('ok')
+    expect(result.signals_written).toBe(2)
+    expect(createdSignals).toHaveLength(2)
+
+    const waterSignal = createdSignals.find(s => s.category === 'water')
+    const electricitySignal = createdSignals.find(s => s.category === 'electricity')
+
+    expect(waterSignal.short_label).toBe('Water pressure is low')
+    expect(electricitySignal.short_label).toBe('Power voltage is low')
+  })
 })
 
 describe('aggregateIntakeMetrics', () => {

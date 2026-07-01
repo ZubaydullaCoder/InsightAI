@@ -48,6 +48,7 @@ model User {
   password_hash String
   is_active     Boolean  @default(true)
   created_at    DateTime @default(now())
+  role          String   @default("hokim") @db.VarChar(30)
 
   district District @relation(fields: [district_id], references: [id])
 
@@ -97,6 +98,7 @@ model SignalMessage {
   keyword_matched     Boolean  @default(false)
   matched_keyword     String?  @db.VarChar(120)
   short_label         String?  @db.VarChar(100)
+  status              String   @default("yangi") @db.VarChar(20)
   classified_at       DateTime
   created_at          DateTime @default(now())
 

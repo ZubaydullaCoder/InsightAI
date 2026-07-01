@@ -20,6 +20,7 @@ export interface Signal {
   matchedKeyword:     string | null
   shortLabel:         string | null
   classifiedAt:       string    // ISO 8601 UTC
+  status:             string
 }
 
 export interface Mahalla {

@@ -23,18 +23,18 @@ function formatClockTime(isoString: string): string {
   return `${hh}:${mm}`
 }
 
-function getStatusDetails(id: number): { text: string; color: string; bg: string; activeBg: string } {
-  const mod = id % 4
-  switch (mod) {
-    case 0:
-      return { text: 'Янги', color: '#2563EB', bg: '#2563EB08', activeBg: '#2563EB1A' }
-    case 1:
+function getStatusDetails(statusStr: string): { text: string; color: string; bg: string; activeBg: string } {
+  const norm = (statusStr ?? 'yangi').toLowerCase()
+  switch (norm) {
+    case 'jarayonda':
       return { text: 'Жараёнда', color: '#EA580C', bg: '#EA580C08', activeBg: '#EA580C1A' }
-    case 2:
+    case 'bajarildi':
       return { text: 'Бажарилди', color: '#0D9488', bg: '#0D948808', activeBg: '#0D94881A' }
-    case 3:
-    default:
+    case 'tasdiqlandi':
       return { text: 'Тасдиқланди', color: '#16A34A', bg: '#16A34A08', activeBg: '#16A34A1A' }
+    case 'yangi':
+    default:
+      return { text: 'Янги', color: '#2563EB', bg: '#2563EB08', activeBg: '#2563EB1A' }
   }
 }
 
@@ -51,7 +51,7 @@ export function SignalCard({ signal, isActive, categoryColor, onClick }: SignalC
   const mahallaLabel = formatMahallaLabel(signal.mahallaName)
   const locationLabel = `${districtName}, ${mahallaLabel}`
 
-  const status = getStatusDetails(signal.id)
+  const status = getStatusDetails(signal.status)
   const confidence = getAiConfidence(signal.id)
 
   const bgColor = isActive ? status.activeBg : status.bg
@@ -140,22 +140,20 @@ export function SignalCard({ signal, isActive, categoryColor, onClick }: SignalC
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginTop: 2 }}>
-          {signal.isGroup && (
-            <span
-              style={{
-                fontSize: 10,
-                fontWeight: 700,
-                background: groupBadgeBg,
-                color: groupBadgeColor,
-                border: groupBadgeBorder,
-                padding: '1px 5px',
-                borderRadius: 5,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {signal.groupCount} та сигнал
-            </span>
-          )}
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              background: groupBadgeBg,
+              color: groupBadgeColor,
+              border: groupBadgeBorder,
+              padding: '1px 5px',
+              borderRadius: 5,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {groupCount} та сигнал
+          </span>
           <span
             style={{
               fontSize: 11,

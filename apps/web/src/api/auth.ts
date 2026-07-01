@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query'
 import type {
   LoginSuccessResponse,
   LogoutSuccessResponse,
@@ -81,4 +82,12 @@ export async function getCurrentSession(): Promise<CurrentSessionResponse> {
   }
 
   return res.json() as Promise<CurrentSessionResponse>
+}
+
+export function useSession() {
+  return useQuery({
+    queryKey: ['session'],
+    queryFn: getCurrentSession,
+    staleTime: Infinity,
+  })
 }

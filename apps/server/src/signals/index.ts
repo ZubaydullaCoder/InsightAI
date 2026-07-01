@@ -72,7 +72,9 @@ signalsRouter.get('/signals', async (req, res) => {
   }
 
   try {
-    const rows = await querySignals(districtId, from, to)
+    const role = req.session.role
+    const category = ['water', 'electricity', 'gas', 'waste'].includes(role || '') ? role : undefined
+    const rows = await querySignals(districtId, from, to, category)
     const signals = rows.map(mapSignalRow)
     return res.json(signals)
   } catch (err) {
@@ -162,6 +164,17 @@ signalsRouter.get('/signals/:id/context', async (req, res) => {
       })
     }
 
+    // Role check: If utility company, they can only access context for their category
+    const role = req.session.role
+    const isUtility = ['water', 'electricity', 'gas', 'waste'].includes(role || '')
+    if (isUtility && role !== anchor.category) {
+      return res.status(404).json({
+        statusCode: 404,
+        error: 'Not Found',
+        message: 'Signal not found',
+      })
+    }
+
     const rows = await queryContextSignals(
       districtId,
       anchor.mahalla_id,
@@ -178,6 +191,87 @@ signalsRouter.get('/signals/:id/context', async (req, res) => {
       statusCode: 500,
       error: 'Internal Server Error',
       message: 'Failed to load signal context',
+    })
+  }
+})
+
+signalsRouter.patch('/signals/:id/status', async (req, res) => {
+  const districtId = req.session.districtId
+
+  if (districtId === undefined) {
+    return res.status(401).json({
+      statusCode: 401,
+      error: 'Unauthorized',
+      message: 'Authentication required',
+    })
+  }
+
+  const idStr = req.params['id'] ?? ''
+  const rawId = /^\d+$/.test(idStr) ? parseInt(idStr, 10) : NaN
+  if (!Number.isSafeInteger(rawId) || rawId <= 0) {
+    return res.status(404).json({
+      statusCode: 404,
+      error: 'Not Found',
+      message: 'Signal not found',
+    })
+  }
+
+  const { status } = req.body
+  if (typeof status !== 'string' || !['yangi', 'jarayonda', 'bajarildi', 'tasdiqlandi'].includes(status)) {
+    return res.status(400).json({
+      statusCode: 400,
+      error: 'Bad Request',
+      message: 'Invalid status value',
+    })
+  }
+
+  try {
+    const target = await prisma.signalMessage.findFirst({
+      where: { id: rawId, district_id: districtId },
+    })
+
+    if (!target) {
+      return res.status(404).json({
+        statusCode: 404,
+        error: 'Not Found',
+        message: 'Signal not found',
+      })
+    }
+
+    const role = req.session.role
+    if (role === 'hokim') {
+      return res.status(403).json({
+        statusCode: 403,
+        error: 'Forbidden',
+        message: 'Hokim profile is not authorized to change signal status',
+      })
+    }
+
+    if (role !== target.category) {
+      return res.status(403).json({
+        statusCode: 403,
+        error: 'Forbidden',
+        message: `Only the ${target.category} organization is authorized to change this status`,
+      })
+    }
+
+    // Update all signals in the same group (same MFY and category)
+    await prisma.signalMessage.updateMany({
+      where: {
+        district_id: districtId,
+        mahalla_id:  target.mahalla_id,
+        category:    target.category,
+      },
+      data: { status },
+    })
+
+    return res.json({ success: true, status })
+  } catch (err) {
+    logger.error({ err, signalId: rawId }, 'Failed to update signal status')
+    return res.status(500).json({
+      statusCode: 500,
+      error: 'Internal Server Error',
+      message: 'Failed to update signal status',
     })
   }
 })

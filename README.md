@@ -1,6 +1,6 @@
-# PublicInsight AI
+# Insight AI
 
-PublicInsight AI is a private internal civic signal monitoring system for district leadership in Uzbekistan.
+Insight AI is a private internal civic signal monitoring system for district leadership in Uzbekistan.
 
 It listens to selected mahalla Telegram supergroups through an official bot, filters civic utility signals, classifies them by service category, and displays them in an internal dashboard.
 

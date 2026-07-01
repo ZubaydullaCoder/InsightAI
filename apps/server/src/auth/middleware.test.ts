@@ -105,7 +105,7 @@ describe('requireAuth middleware', () => {
     expect(res.body.districtId).toBe(42)
     expect(mockUserFindUnique).toHaveBeenCalledWith({
       where:  { id: 1 },
-      select: { id: true, district_id: true, is_active: true },
+      select: { id: true, district_id: true, is_active: true, role: true },
     })
   })
 

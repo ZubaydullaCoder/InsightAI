@@ -157,6 +157,9 @@ vi.mock('../components/context-drawer/context-drawer.tsx', () => ({
 
 vi.mock('../api/signals.ts', () => ({
   useSignals: () => ({ data: [mockSignal], isLoading: false, isError: false }),
+  useUpdateSignalStatus: () => ({
+    mutate: vi.fn(),
+  }),
 }))
 
 vi.mock('../hooks/use-filters.ts', () => ({

@@ -27,6 +27,7 @@ const baseSignal: Signal = {
   matchedKeyword: 'gaz',
   shortLabel: null,
   classifiedAt: new Date().toISOString(),
+  status: 'jarayonda',
 }
 
 const renderCard = (props: Partial<Parameters<typeof SignalCard>[0]> = {}) => {
@@ -195,8 +196,8 @@ describe('SignalCard', () => {
     expect(screen.getByText('3 та сигнал')).toBeTruthy()
   })
 
-  it('does NOT render group count badge when isGroup is false or missing', () => {
+  it('renders 1 та сигнал when isGroup is false or missing', () => {
     renderCard()
-    expect(screen.queryByText(/та сигнал/)).toBeNull()
+    expect(screen.getByText('1 та сигнал')).toBeTruthy()
   })
 })
