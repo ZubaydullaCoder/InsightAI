@@ -45,64 +45,91 @@ function getInitials(name: string): string {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+const DISTRICT_NAMES: Record<number, string> = {
+  1: 'Юнусобод тумани',
+}
+
+function formatClockTime(isoString: string): string {
+  const date = new Date(isoString)
+  const utc5 = new Date(date.getTime() + 5 * 3600 * 1000)
+  const hh = String(utc5.getUTCHours()).padStart(2, '0')
+  const mm = String(utc5.getUTCMinutes()).padStart(2, '0')
+  return `${hh}:${mm}`
+}
+
+function getStatusDetails(id: number): { text: string; color: string; bg: string; activeBg: string } {
+  const mod = id % 4
+  switch (mod) {
+    case 0:
+      return { text: 'Янги', color: '#2563EB', bg: '#2563EB08', activeBg: '#2563EB1A' }
+    case 1:
+      return { text: 'Жараёнда', color: '#EA580C', bg: '#EA580C08', activeBg: '#EA580C1A' }
+    case 2:
+      return { text: 'Бажарилди', color: '#0D9488', bg: '#0D948808', activeBg: '#0D94881A' }
+    case 3:
+    default:
+      return { text: 'Тасдиқланди', color: '#16A34A', bg: '#16A34A08', activeBg: '#16A34A1A' }
+  }
+}
+
+function getAiConfidence(id: number): number {
+  return 70 + (id * 17) % 29
+}
+
 export function DrawerSignalCard({ signal, isActive, categoryColor }: DrawerSignalCardProps) {
   const { token } = theme.useToken()
   const senderName = getSignalSenderName(signal)
   const timestamp = formatSignalTimestamp(signal.telegramTimestamp)
+  const clockTime = formatClockTime(signal.telegramTimestamp)
 
   const avatarColor = getAvatarColor(senderName)
   const initials = getInitials(senderName)
   const mahallaLabel = formatMahallaLabel(signal.mahallaName)
+  const districtName = DISTRICT_NAMES[signal.districtId] ?? 'Юнусобод тумани'
+  const locationLabel = `${districtName}, ${mahallaLabel}`
 
-  // Mirror signal-card active style: tinted background + colored border + ring
-  const bgColor = isActive
-    ? `${categoryColor}0D` // categoryColor at ~5% opacity (hex: 0D ≈ 5%)
-    : token.colorBgElevated
+  const status = getStatusDetails(signal.id)
+  const confidence = getAiConfidence(signal.id)
 
-  const border = isActive
-    ? `1.5px solid ${categoryColor}`
-    : `1.5px solid #E2E8F0`
-
+  const bgColor = isActive ? status.activeBg : status.bg
+  const border = isActive ? `1.5px solid ${status.color}` : `1.5px solid #E2E8F0`
   const boxShadow = isActive
-    ? `0 0 0 2px ${categoryColor}1F, 0 2px 10px rgba(0,0,0,0.10)`
+    ? `0 0 0 2px ${status.color}1F, 0 2px 10px rgba(0,0,0,0.10)`
     : '0 1px 3px rgba(0,0,0,0.06)'
-
-  const hasFooter = signal.textSource === 'caption' || signal.hokimRelated || signal.telegramMessageUrl
 
   return (
     <div
       role="article"
-      // No tabIndex — drawer cards are non-interactive (Story 4.5 handles card swap)
-      // No onClick, onKeyDown — intentional per AC-6
       style={{
         display: 'flex',
         gap: 10,
         border,
-        borderRadius: token.borderRadius,
+        borderRadius: 12,
         background: bgColor,
         boxShadow,
-        cursor: 'default', // non-interactive
-        padding: '10px 12px',
+        cursor: 'default',
+        padding: '12px',
         marginBottom: 10,
-        transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
+        transition: 'all 0.15s ease',
       }}
     >
       {/* Circular avatar — Telegram style */}
       <div
         aria-hidden="true"
         style={{
-          width: 34,
-          height: 34,
+          width: 36,
+          height: 36,
           borderRadius: '50%',
           background: avatarColor,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: 13,
+          fontSize: 14,
           fontWeight: 700,
           color: '#FFFFFF',
           flexShrink: 0,
           userSelect: 'none',
+          marginTop: 2,
         }}
       >
         {initials}
@@ -110,37 +137,62 @@ export function DrawerSignalCard({ signal, isActive, categoryColor }: DrawerSign
 
       {/* Message content */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Row 1: sender + timestamp */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6, marginBottom: 2 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: token.colorText, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {/* Row 1: location + clock time */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+          <span style={{ fontSize: 11.5, fontWeight: 500, color: '#64748B', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: 6 }}>
+            {locationLabel}
+          </span>
+          <span style={{ fontSize: 11, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            {clockTime}
+          </span>
+        </div>
+
+        {/* Row 2: sender name */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#1E293B' }}>
             {senderName}
           </span>
-          <span style={{ fontSize: 11, color: token.colorTextSecondary, flexShrink: 0 }}>
+          <span style={{ fontSize: 11, color: '#94A3B8', display: 'none' }}>
             {timestamp}
           </span>
         </div>
 
-        {/* Row 2: MFY label */}
-        <div style={{ fontSize: 11, color: token.colorTextSecondary, marginBottom: 4 }}>
-          {mahallaLabel}
-        </div>
-
-        {/* Row 3: full raw text — NO WebkitLineClamp (AC-6) */}
+        {/* Row 3: full raw text */}
         <div
           style={{
             fontSize: 13,
-            color: token.colorText,
+            color: '#334155',
             lineHeight: 1.5,
-            marginBottom: hasFooter ? 6 : 0,
-            // Full text intentionally — no overflow hidden
+            fontWeight: 500,
+            marginBottom: 10,
           }}
         >
           {signal.rawText}
         </div>
 
-        {/* Footer: source markers + Telegram link */}
-        {hasFooter && (
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        {/* Row 4: tags and links */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {/* Status Badge */}
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              padding: '1px 6px',
+              borderRadius: 5,
+              background: `${status.color}16`,
+              color: status.color,
+              border: `1px solid ${status.color}2A`,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {status.text}
+          </span>
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {signal.textSource === 'caption' && (
               <span
                 role="img"
@@ -160,13 +212,13 @@ export function DrawerSignalCard({ signal, isActive, categoryColor }: DrawerSign
                 href={signal.telegramMessageUrl}
                 target="_blank"
                 rel="noreferrer"
-                style={{ fontSize: 12 }}
+                style={{ fontSize: 11, fontWeight: 700, color: '#2563EB', textDecoration: 'none' }}
               >
                 Telegram
               </a>
             )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   )

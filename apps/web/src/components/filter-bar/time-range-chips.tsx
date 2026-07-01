@@ -3,12 +3,9 @@ import { strings } from '../../strings.ts'
 import type { TimeRangePreset } from '../../hooks/use-filters.ts'
 
 const CHIP_DEFS: { key: TimeRangePreset; label: string }[] = [
-  { key: '1h',        label: strings.filterBar.preset1h },
-  { key: '3h',        label: strings.filterBar.preset3h },
-  { key: '6h',        label: strings.filterBar.preset6h },
   { key: 'today',     label: strings.filterBar.presetToday },
-  { key: 'yesterday', label: strings.filterBar.presetYesterday },
   { key: '7d',        label: strings.filterBar.preset7d },
+  { key: 'yesterday', label: strings.filterBar.presetYesterday },
 ]
 
 export interface TimeRangeChipsProps {

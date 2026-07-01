@@ -121,26 +121,29 @@ export function ContextDrawer({
       }
       className="context-drawer"
       styles={{
-        mask: { background: 'rgba(15,12,10,0.06)' },
+        mask: { background: 'rgba(15, 23, 42, 0.08)' },
         wrapper: {
-          top: '10px',
-          bottom: '10px',
-          right: '10px',
-          height: 'calc(100% - 20px)',
-          borderRadius: '14px',
-          boxShadow: '0 10px 32px rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.08)',
+          top: '12px',
+          bottom: '12px',
+          right: '12px',
+          height: 'calc(100% - 24px)',
+          borderRadius: '16px',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         },
         section: {
-          borderRadius: '14px',
+          borderRadius: '16px',
           border: '1px solid #E2E8F0',
           overflow: 'hidden',
           height: '100%',
         },
         body: {
-          padding: '12px 10px',
+          padding: '16px 14px',
+          background: '#F8FAFC',
         },
         header: {
-          padding: '12px 10px',
+          padding: '16px 14px',
+          borderBottom: '1px solid #E2E8F0',
+          background: '#FFFFFF',
         },
       }}
       // Keep mounted so 4.5 card-swap stays smooth; do NOT use destroyOnClose (AC-7 note)

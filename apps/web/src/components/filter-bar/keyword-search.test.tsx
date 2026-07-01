@@ -39,9 +39,9 @@ describe('KeywordSearch', () => {
     expect(input.value).toBe('сув')
   })
 
-  it('placeholder renders as Қидириш... (no guillemets)', () => {
+  it('placeholder renders as Сигналлар бўйича қидирув', () => {
     renderSearch()
-    const input = screen.getByPlaceholderText('Қидириш...')
+    const input = screen.getByPlaceholderText('Сигналлар бўйича қидирув')
     expect(input).toBeInTheDocument()
   })
 

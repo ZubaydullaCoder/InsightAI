@@ -1,5 +1,4 @@
 // apps/web/src/pages/dashboard-page.tsx
-import { useState, useRef, useCallback, useEffect } from 'react'
 import { Alert, Skeleton } from 'antd'
 import { AppShell } from '../components/app-shell.tsx'
 import { UnsupportedScreen } from '../components/unsupported-screen.tsx'
@@ -9,9 +8,12 @@ import { useHealth } from '../api/health.ts'
 import { DelayBanner } from '../components/delay-banner.tsx'
 import { FilterBar } from '../components/filter-bar/filter-bar.tsx'
 import { useFilters } from '../hooks/use-filters.ts'
+import { useDashboardDrawerState } from '../hooks/use-dashboard-drawer-state.ts'
+import { useDashboardSearchState } from '../hooks/use-dashboard-search-state.ts'
 import { filterByTimeRange, filterByMahalla, filterByKeyword } from '../utils/filter-utils.ts'
 import { strings } from '../strings.ts'
 import { ContextDrawer } from '../components/context-drawer/context-drawer.tsx'
+import { StatsBar } from '../components/stats-bar/stats-bar.tsx'
 
 // Lane label order for loading skeleton — matches LANE_ORDER in LaneGrid
 const SKELETON_LANE_LABELS = [
@@ -25,6 +27,42 @@ const SKELETON_LANE_LABELS = [
 // Group raw Signal[] into 5 lanes.
 // Hokim lane duplication: signals with hokimRelated===true appear in BOTH
 // their service lane AND the hokim lane (same object reference — not a copy).
+function collapseSignalsIntoGroups(signals: Signal[]): Signal[] {
+  const groups: Record<string, Signal[]> = {}
+  for (const s of signals) {
+    const key = `${s.mahallaId}-${s.category}`
+    if (!groups[key]) {
+      groups[key] = []
+    }
+    groups[key].push(s)
+  }
+
+  const result: Signal[] = []
+  for (const key of Object.keys(groups)) {
+    const groupList = groups[key]
+    if (groupList.length === 1) {
+      result.push(groupList[0])
+    } else {
+      const sorted = [...groupList].sort(
+        (a, b) => new Date(b.telegramTimestamp).getTime() - new Date(a.telegramTimestamp).getTime()
+      )
+      const latest = sorted[0]
+      const grouped: Signal = {
+        ...latest,
+        isGroup: true,
+        groupCount: groupList.length,
+        rawText: latest.shortLabel || latest.rawText,
+        hokimRelated: groupList.some(s => s.hokimRelated),
+      }
+      result.push(grouped)
+    }
+  }
+
+  return result.sort(
+    (a, b) => new Date(b.telegramTimestamp).getTime() - new Date(a.telegramTimestamp).getTime()
+  )
+}
+
 function groupSignals(signals: Signal[]): SignalsByCategory {
   const lanes: SignalsByCategory = {
     hokim:       [],
@@ -62,28 +100,14 @@ export function DashboardPage() {
   const { data: healthData } = useHealth()
   const isDelayed = healthData?.status === 'delayed' || healthData?.status === 'no_data'
 
-  // TWO-VALUE search state pattern:
-  // searchInputText — immediate visible value (useState, updated on every keystroke)
-  // filterState.searchText — debounced applied filter (updated after 300ms)
-  const [searchInputText, setSearchInputText] = useState('')
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const handleSearchChange = useCallback((text: string) => {
-    setSearchInputText(text)                        // immediate visible update
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
-    searchTimerRef.current = setTimeout(() => setSearchText(text), 300)  // debounced filter
-  }, [setSearchText])
-
-  const handleSearchClear = useCallback(() => {
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current)  // cancel pending timer
-    setSearchInputText('')   // immediate visible clear
-    setSearchText('')        // immediate filter clear — NO debounce (AC-3)
-  }, [setSearchText])
-
-  // Clean up debounce timer on unmount
-  useEffect(() => {
-    return () => { if (searchTimerRef.current) clearTimeout(searchTimerRef.current) }
-  }, [])
+  const {
+    searchInputText,
+    handleSearchChange,
+    handleSearchClear,
+  } = useDashboardSearchState({
+    appliedSearchText: filterState.searchText,
+    onAppliedSearchTextChange: setSearchText,
+  })
 
   // Apply client-side filters BEFORE grouping — in order: time → mahalla → keyword → group
   // When isApiPreset is true, the API has already scoped to yesterday/7d/custom — skip filterByTimeRange
@@ -93,33 +117,21 @@ export function DashboardPage() {
     : filterByTimeRange(rawSignals, filterState.timeRange)
   const mahallaFiltered = filterByMahalla(timeFilteredSignals, filterState.mahallaId)
   const keywordFiltered = filterByKeyword(mahallaFiltered, filterState.searchText)
-  const groupedSignals = groupSignals(keywordFiltered)
+  const collapsedSignals = collapseSignalsIntoGroups(keywordFiltered)
+  const groupedSignals = groupSignals(collapsedSignals)
 
   // isKeywordActive uses the debounced applied filter (searchText), not the immediate visible value
   const isKeywordActive = filterState.searchText.trim().length > 0
 
-  // Context drawer state (AC: 1, 8, 11)
-  const [activeSignal, setActiveSignal] = useState<Signal | null>(null)
-  const [activeSignalClickedAt, setActiveSignalClickedAt] = useState<Date | null>(null)
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
-
-  // Capture click time once — do NOT recompute inside drawer render (AC-2)
-  const handleCardClick = useCallback((signal: Signal) => {
-    setActiveSignal(signal)
-    setActiveSignalClickedAt(new Date())
-    setIsDrawerOpen(true)
-  }, [])
-
-  const handleDrawerClose = useCallback(() => {
-    setIsDrawerOpen(false)
-  }, [])
-
-  const handleDrawerAfterOpenChange = useCallback((open: boolean) => {
-    if (!open) {
-      setActiveSignal(null)
-      setActiveSignalClickedAt(null)
-    }
-  }, [])
+  const {
+    activeSignal,
+    activeSignalClickedAt,
+    activeSignalId,
+    isDrawerOpen,
+    openDrawer,
+    closeDrawer,
+    handleDrawerAfterOpenChange,
+  } = useDashboardDrawerState()
 
   return (
     <>
@@ -169,11 +181,14 @@ export function DashboardPage() {
             {isDelayed && (
               <DelayBanner lastBatchAt={healthData?.lastBatchAt ?? null} />
             )}
+            <div style={{ marginTop: 12 }}>
+              <StatsBar signals={keywordFiltered} />
+            </div>
             <div style={{ flex: 1, minHeight: 0 }}>
               <LaneGrid
                 signals={groupedSignals}
-                activeSignalId={isDrawerOpen ? activeSignal?.id ?? null : null}
-                onCardClick={handleCardClick}
+                activeSignalId={activeSignalId}
+                onCardClick={openDrawer}
                 isKeywordSearch={isKeywordActive}
                 isDrawerOpen={isDrawerOpen}
               />
@@ -186,7 +201,7 @@ export function DashboardPage() {
         anchorSignal={activeSignal}
         anchorClickedAt={activeSignalClickedAt}
         isOpen={isDrawerOpen}
-        onClose={handleDrawerClose}
+        onClose={closeDrawer}
         onAfterOpenChange={handleDrawerAfterOpenChange}
         contextParams={computedApiParams}
       />
