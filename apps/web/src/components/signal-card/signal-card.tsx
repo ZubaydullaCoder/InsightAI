@@ -23,20 +23,18 @@ function formatClockTime(isoString: string): string {
   return `${hh}:${mm}`
 }
 
-function getStatusDetails(id: number): { text: string; bg: string; color: string } {
-  const mod = id % 5
+function getStatusDetails(id: number): { text: string; color: string; bg: string; activeBg: string } {
+  const mod = id % 4
   switch (mod) {
     case 0:
-      return { text: 'Янги', bg: '#EFF6FF', color: '#2563EB' }
+      return { text: 'Янги', color: '#2563EB', bg: '#2563EB08', activeBg: '#2563EB1A' }
     case 1:
-      return { text: 'Тасдиқланди', bg: '#F0FDF4', color: '#16A34A' }
+      return { text: 'Жараёнда', color: '#EA580C', bg: '#EA580C08', activeBg: '#EA580C1A' }
     case 2:
-      return { text: 'Кўриб чиқилди', bg: '#F5F3FF', color: '#7C3AED' }
+      return { text: 'Бажарилди', color: '#0D9488', bg: '#0D948808', activeBg: '#0D94881A' }
     case 3:
-      return { text: 'Рад этилди', bg: '#FEF2F2', color: '#DC2626' }
-    case 4:
     default:
-      return { text: 'Операторга берилди', bg: '#FFF7ED', color: '#EA580C' }
+      return { text: 'Тасдиқланди', color: '#16A34A', bg: '#16A34A08', activeBg: '#16A34A1A' }
   }
 }
 
@@ -56,17 +54,18 @@ export function SignalCard({ signal, isActive, categoryColor, onClick }: SignalC
   const status = getStatusDetails(signal.id)
   const confidence = getAiConfidence(signal.id)
 
-  const bgColor = isActive
-    ? `${categoryColor}1A` // ~10% opacity when active
-    : `${categoryColor}08` // ~3% opacity when inactive
-
-  const border = isActive
-    ? `1.5px solid ${categoryColor}`
-    : `1.5px solid #E2E8F0`
-
+  const bgColor = isActive ? status.activeBg : status.bg
+  const border = isActive ? `1.5px solid ${status.color}` : '1.5px solid #E2E8F0'
   const boxShadow = isActive
-    ? `0 0 0 2px ${categoryColor}1F, 0 2px 10px rgba(0,0,0,0.10)`
+    ? `0 0 0 2px ${status.color}1F, 0 2px 10px rgba(0,0,0,0.10)`
     : '0 1px 3px rgba(0,0,0,0.06)'
+
+  // Count indicator color depending on volume
+  const groupCount = signal.groupCount || 1
+  const isUrgent = groupCount >= 3
+  const groupBadgeBg = isUrgent ? '#FEF2F2' : '#F1F5F9'
+  const groupBadgeColor = isUrgent ? '#DC2626' : '#475569'
+  const groupBadgeBorder = isUrgent ? '1.5px solid #FCA5A5' : '1.5px solid #E2E8F0'
 
   return (
     <div
@@ -95,7 +94,7 @@ export function SignalCard({ signal, isActive, categoryColor, onClick }: SignalC
       onMouseEnter={(e) => {
         if (isActive) {
           ;(e.currentTarget as HTMLDivElement).style.boxShadow =
-            `0 0 0 2px ${categoryColor}1F, 0 4px 12px rgba(0,0,0,0.12)`
+            `0 0 0 2px ${status.color}1F, 0 4px 12px rgba(0,0,0,0.12)`
         }
       }}
       onMouseLeave={(e) => {
@@ -130,8 +129,9 @@ export function SignalCard({ signal, isActive, categoryColor, onClick }: SignalC
               style={{
                 fontSize: 10,
                 fontWeight: 700,
-                background: `${categoryColor}1C`,
-                color: categoryColor,
+                background: groupBadgeBg,
+                color: groupBadgeColor,
+                border: groupBadgeBorder,
                 padding: '1px 5px',
                 borderRadius: 5,
                 whiteSpace: 'nowrap',
@@ -175,9 +175,24 @@ export function SignalCard({ signal, isActive, categoryColor, onClick }: SignalC
         {signal.rawText}
       </div>
 
-
       {/* Row 3: Footer tags */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {/* Status Badge */}
+        <span
+          style={{
+            fontSize: 10,
+            fontWeight: 700,
+            padding: '1px 6px',
+            borderRadius: 5,
+            background: `${status.color}16`,
+            color: status.color,
+            border: `1px solid ${status.color}2A`,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {status.text}
+        </span>
+
         {/* Source Badges */}
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
           {signal.textSource === 'caption' && (

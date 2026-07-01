@@ -157,11 +157,12 @@ describe('SignalCard', () => {
     expect(onClick).toHaveBeenCalledWith(baseSignal)
   })
 
-  it('renders the category color as the full border when active', () => {
+  it('renders the status color as the full border when active', () => {
     renderCard({ isActive: true })
     const card = getSignalCard()
+    // baseSignal.id is 1. 1 % 4 = 1 -> "Жараёнда" with color #EA580C
     expect(card).toHaveStyle({
-      border: '1.5px solid #1A7060',
+      border: '1.5px solid #EA580C',
     })
   })
 
