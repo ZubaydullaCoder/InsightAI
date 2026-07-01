@@ -38,7 +38,7 @@ const signals: SignalDraft[] = [
     senderName: 'Дилноза Юсупова', senderUsername: null,
     text: 'Йўлда ёритгичлари кўп вақтдан бери ишламайди, кечқурун жуда қоронғи. Илтимос, ҳокимият назоратга олсин.',
     textSource: 'text', mahallaIndex: 0, minsAgo: 10, keyword: 'hokim',
-    shortLabel: 'Кўча ёритгичлари ишламаслиги бўйича тизимли муаммо',
+    shortLabel: 'Кўча ёритгичлари ишламаслиги туфайли йўллар қоронғи бўлиб қолаётгани кузатилмоқда.',
   },
   {
     updateIdOffset: 2,
@@ -46,7 +46,7 @@ const signals: SignalDraft[] = [
     senderName: 'Акбар Рашидов', senderUsername: 'akbar_r',
     text: 'Маҳаллада болалар майдончаси атрофи чиқиндилар билан тўлган. Тозалаш ишлари умуман олиб борилмаяпти.',
     textSource: 'text', mahallaIndex: 1, minsAgo: 28, keyword: 'rais',
-    shortLabel: 'Болалар майдончасидаги санитария ҳолатининг бузилиши',
+    shortLabel: 'Болалар майдончаси атрофи чиқиндига тўлиб, санитария ҳолати ёмонлашгани айтилмоқда.',
   },
   {
     updateIdOffset: 3,
@@ -54,7 +54,7 @@ const signals: SignalDraft[] = [
     senderName: 'Малика Каримова', senderUsername: null,
     text: 'Йўл белгиси кўринмай қолган, дарахт шохлари орасида қолган. Бу ҳайдовчиларга катта қийинчилик туғдирмоқда.',
     textSource: 'caption', mahallaIndex: 2, minsAgo: 62, keyword: 'hokim',
-    shortLabel: 'Йўл ҳаракати хавфсизлиги белгиси тўсилиб қолгани',
+    shortLabel: 'Йўл белгисини дарахт шохлари тўсиб қолгани ва ҳаракатга халақит бераётгани айтилмоқда.',
   },
   {
     updateIdOffset: 4,
@@ -62,7 +62,7 @@ const signals: SignalDraft[] = [
     senderName: 'Жамшид Тошматов', senderUsername: 'jamshid_t',
     text: 'Икки йилдан бери йўлда катта чуқурликлар бор. Ёмғир ёғса кўлга айланади, машиналарга зарар етяпти.',
     textSource: 'text', mahallaIndex: 0, minsAgo: 105, keyword: 'hokim',
-    shortLabel: 'Йўл қопламасининг шикастланиши ва чуқурлар муаммоси',
+    shortLabel: 'Йўл қопламаси шикастланиб, чуқурлар пайдо бўлгани бўйича шикоят қилишмоқда.',
   },
 
   // ── Suv (Water) ────────────────────────────────────────────────────────
@@ -73,7 +73,7 @@ const signals: SignalDraft[] = [
     senderName: 'Нилуфар Азимова', senderUsername: null,
     text: 'Сув оқими жуда паст, уйимизда 3-қаватга сув умуман кўтарилмаяпти. Муаммони ҳал қилиб беринг.',
     textSource: 'text', mahallaIndex: 0, minsAgo: 5, keyword: 'suv',
-    shortLabel: 'Ичимлик суви таъминоти қувуридаги авария сабабли сув босими пастлиги ва узилишлар',
+    shortLabel: 'Ичимлик суви таъминотида сув босими пастлиги ва узилишлар бўйича норозиликлар кузатилмоқда.',
   },
   {
     updateIdOffset: 6,
@@ -81,7 +81,7 @@ const signals: SignalDraft[] = [
     senderName: 'Санжар Бекмуродов', senderUsername: 'sanjar_b',
     text: 'Эрталабдан бери ичимлик суви йўқ. Оғиз суви ҳам келмади. Қачон берилади?',
     textSource: 'text', mahallaIndex: 0, minsAgo: 15, keyword: 'suv',
-    shortLabel: 'Ичимлик суви таъминоти қувуридаги авария сабабли сув босими пастлиги ва узилишлар',
+    shortLabel: 'Ичимлик суви таъминотида сув босими пастлиги ва узилишлар бўйича норозиликлар кузатилмоқда.',
   },
   {
     updateIdOffset: 8,
@@ -89,7 +89,7 @@ const signals: SignalDraft[] = [
     senderName: 'Умид Нишонов', senderUsername: null,
     text: 'Бугун сувнинг таъми ўзгарган, ранги ҳам хирароқ. Ичишга қўрқяпмиз, ҳид бор.',
     textSource: 'text', mahallaIndex: 0, minsAgo: 72, keyword: 'suv',
-    shortLabel: 'Ичимлик суви таъминоти қувуридаги авария сабабли сув босими пастлиги ва узилишлар',
+    shortLabel: 'Ичимлик суви таъминотида сув босими пастлиги ва узилишлар бўйича норозиликлар кузатилмоқда.',
   },
   // Single water signal in Bogiston
   {
@@ -98,7 +98,7 @@ const signals: SignalDraft[] = [
     senderName: 'Феруза Мамадалиева', senderUsername: null,
     text: 'Кўчамизда қувурдан сув оқиб кетяпти, жуда катта исроф бўляпти. Авария хизмати чақирилсин.',
     textSource: 'caption', mahallaIndex: 2, minsAgo: 40, keyword: 'suv',
-    shortLabel: 'Ичимлик суви қувуридаги йирик авариявий сизиб чиқиш',
+    shortLabel: 'Кўчадаги сув қувуридан катта миқдорда сув сизиб чиқаётгани хабар қилинмоқда.',
   },
 
   // ── Elektr (Electricity) ────────────────────────────────────────────────
@@ -109,7 +109,7 @@ const signals: SignalDraft[] = [
     senderName: 'Зулфия Ҳасанова', senderUsername: 'zulfiya_h',
     text: 'Электр токи тез-тез ўчиб қоляпти. Кундузи ҳам, кечаси ҳам. Техникалар куйиб қолишидан хавотирдамиз.',
     textSource: 'text', mahallaIndex: 1, minsAgo: 12, keyword: 'elektr',
-    shortLabel: 'Трансформатордаги кучли учқун ва авариявий ҳолат сабабли кучланиш пастлиги ва электр ўчиши',
+    shortLabel: 'Электр таъминотидаги тез-тез ўчишлар ва кучланишнинг жуда пастлигидан шикоят қилишмоқда.',
   },
   {
     updateIdOffset: 10,
@@ -117,7 +117,7 @@ const signals: SignalDraft[] = [
     senderName: 'Отабек Мирзаев', senderUsername: null,
     text: 'Маҳалламизда кучланиш жуда паст. Кондиционерлар ва музлатгичлар умуман ишламаяпти.',
     textSource: 'text', mahallaIndex: 1, minsAgo: 32, keyword: 'svet',
-    shortLabel: 'Трансформатордаги кучли учқун ва авариявий ҳолат сабабли кучланиш пастлиги ва электр ўчиши',
+    shortLabel: 'Электр таъминотидаги тез-тез ўчишлар ва кучланишнинг жуда пастлигидан шикоят қилишмоқда.',
   },
   {
     updateIdOffset: 12,
@@ -125,7 +125,7 @@ const signals: SignalDraft[] = [
     senderName: 'Камола Раҳимова', senderUsername: null,
     text: 'Кечаси соат 22:00 дан кейин узоқ муддатга электр ўчди. Муаммо нимада эканлигини ким билади?',
     textSource: 'text', mahallaIndex: 1, minsAgo: 140, keyword: 'svet',
-    shortLabel: 'Трансформатордаги кучли учқун ва авариявий ҳолат сабабли кучланиш пастлиги ва электр ўчиши',
+    shortLabel: 'Электр таъминотидаги тез-тез ўчишлар ва кучланишнинг жуда пастлигидан шикоят қилишмоқда.',
   },
   // Single electricity signal in Navbahor
   {
@@ -134,7 +134,7 @@ const signals: SignalDraft[] = [
     senderName: 'Барно Содиқова', senderUsername: 'barno_s',
     text: 'Трансформатор яқинида қаттиқ учқун чиқяпти, овоз келяпти. Жуда хавфли ҳолат, тезда келиб кўринг.',
     textSource: 'caption', mahallaIndex: 0, minsAgo: 85, keyword: 'elektr',
-    shortLabel: 'Трансформатордаги авариявий учқун чиқиш хавфи',
+    shortLabel: 'Трансформатор яқинида учқун чиқиб, авариявий хавфли ҳолат юзага келгани айтилмоқда.',
   },
 
   // ── Gaz (Gas) ───────────────────────────────────────────────────────────
@@ -145,7 +145,7 @@ const signals: SignalDraft[] = [
     senderName: 'Дилшод Эргашев', senderUsername: 'dilshod_e',
     text: 'Газ босими жуда паст, овқат пишириш умуман имконсиз бўляпти. Иситиш тизими ҳам ишламаяпти.',
     textSource: 'text', mahallaIndex: 2, minsAgo: 9, keyword: 'gaz',
-    shortLabel: 'Ҳудудда табиий газ босими жуда пастлиги ва иситиш тизими ишламаётгани',
+    shortLabel: 'Табиий газ босими пастлиги туфайли иситиш тизими ишламаётгани айтилмоқда.',
   },
   {
     updateIdOffset: 16,
@@ -153,7 +153,7 @@ const signals: SignalDraft[] = [
     senderName: 'Муҳаббат Юлдошева', senderUsername: null,
     text: 'Суюлтирилган газ баллонлари узоқ вақтдан бери маҳаллага олиб келинмади. Таъминот тўхтаб қолган.',
     textSource: 'text', mahallaIndex: 2, minsAgo: 115, keyword: 'gaz',
-    shortLabel: 'Ҳудудда табиий газ босими жуда пастлиги ва иситиш тизими ишламаётгани',
+    shortLabel: 'Табиий газ босими пастлиги туфайли иситиш тизими ишламаётгани айтилмоқда.',
   },
   // Single gas signals in Navbahor and Olmazor
   {
@@ -162,7 +162,7 @@ const signals: SignalDraft[] = [
     senderName: 'Нодира Алимова', senderUsername: null,
     text: 'Подъездимизда кучли газ ҳиди сезиляпти. Жуда хавотирли. Илтимос, тезроқ текшириб беринг.',
     textSource: 'text', mahallaIndex: 0, minsAgo: 22, keyword: 'gaz',
-    shortLabel: 'Турар-жой биносида газ сизиб чиқиш хавфи',
+    shortLabel: 'Турар-жой биноси подъездида кучли газ ҳиди сезилаётгани бўйича хавотир билдирилмоқда.',
   },
   {
     updateIdOffset: 15,
@@ -170,7 +170,7 @@ const signals: SignalDraft[] = [
     senderName: 'Сардор Раҳмонов', senderUsername: 'sardor_r',
     text: 'Газ плита доимий равишда ўчиб қоляпти. Бу авариявий ҳолатми ёки босим пастлигиданми?',
     textSource: 'caption', mahallaIndex: 1, minsAgo: 50, keyword: 'gaz',
-    shortLabel: 'Газ таъминоти тизимидаги нобарқарор босим',
+    shortLabel: 'Газ плиталари ва тизимларда босим доимий равишда пасайиб кетаётгани айтилмоқда.',
   },
 
   // ── Chiqindi (Waste) ────────────────────────────────────────────────────
@@ -180,7 +180,7 @@ const signals: SignalDraft[] = [
     senderName: 'Фарҳод Каримов', senderUsername: 'farhod_k',
     text: 'Маҳалламизда чиқиндилар вақтида олиб кетилмаяпти. Ҳидланиб кетган, санитария ҳолати жуда ёмон.',
     textSource: 'text', mahallaIndex: 0, minsAgo: 18, keyword: 'chiqindi',
-    shortLabel: 'Маиший чиқиндиларни ташиб кетиш графигининг бузилиши',
+    shortLabel: 'Маҳаллада маиший чиқиндиларни ташиб кетиш графиги бузилаётгани кузатилмоқда.',
   },
   {
     updateIdOffset: 18,
@@ -188,7 +188,7 @@ const signals: SignalDraft[] = [
     senderName: 'Раъно Усмонова', senderUsername: null,
     text: 'Контейнерлар тўлиб кетган, ахлатлар атрофга сочилиб ётибди. Кўча жуда ифлос аҳволда.',
     textSource: 'caption', mahallaIndex: 1, minsAgo: 48, keyword: 'chiqindi',
-    shortLabel: 'Чиқинди йиғиш шохобчасидаги контейнерларнинг тўлиб тошиши',
+    shortLabel: 'Чиқинди контейнерлари тўлиб-тошиб, атрофга сочилиб кетганидан шикоят қилишмоқда.',
   },
   {
     updateIdOffset: 19,
@@ -196,7 +196,7 @@ const signals: SignalDraft[] = [
     senderName: 'Элёр Алиев', senderUsername: 'elyor_a',
     text: 'Қурилиш чиқиндилари йўл четига тўкиб кетилган. Кўчани тозалаш чоралари кўрилсин.',
     textSource: 'text', mahallaIndex: 2, minsAgo: 92, keyword: 'chiqindi',
-    shortLabel: 'Йўл четига ноқонуний равишда қурилиш чиқиндилари тўкилиши',
+    shortLabel: 'Йўл четига қурилиш чиқиндилари ноқонуний равишда тўкиб кетилгани айтилмоқда.',
   },
   {
     updateIdOffset: 20,
@@ -204,7 +204,7 @@ const signals: SignalDraft[] = [
     senderName: 'Гулчеҳра Назарова', senderUsername: null,
     text: 'Чиқинди ташувчи машиналар жуда кам келяпти. Навбат узун, одамлар норози бўлмоқда.',
     textSource: 'text', mahallaIndex: 0, minsAgo: 150, keyword: 'chiqindi',
-    shortLabel: 'Ҳудуддаги чиқинди ташиш техникаларининг етишмовчилиги',
+    shortLabel: 'Ҳудудда маиший чиқинди ташувчи техникалар етишмовчилиги бўйича норозилик кузатилмоқда.',
   },
 ]
 
