@@ -157,7 +157,7 @@ export function LaneColumn({ laneKey, signals, activeSignalId, onCardClick, isKe
             textAlign: 'center',
           }}
         >
-          {signals.length}
+          {signals.reduce((sum, s) => sum + (s.groupCount || 1), 0)}
         </span>
       </div>
 

@@ -27,6 +27,42 @@ const SKELETON_LANE_LABELS = [
 // Group raw Signal[] into 5 lanes.
 // Hokim lane duplication: signals with hokimRelated===true appear in BOTH
 // their service lane AND the hokim lane (same object reference — not a copy).
+function collapseSignalsIntoGroups(signals: Signal[]): Signal[] {
+  const groups: Record<string, Signal[]> = {}
+  for (const s of signals) {
+    const key = `${s.mahallaId}-${s.category}`
+    if (!groups[key]) {
+      groups[key] = []
+    }
+    groups[key].push(s)
+  }
+
+  const result: Signal[] = []
+  for (const key of Object.keys(groups)) {
+    const groupList = groups[key]
+    if (groupList.length === 1) {
+      result.push(groupList[0])
+    } else {
+      const sorted = [...groupList].sort(
+        (a, b) => new Date(b.telegramTimestamp).getTime() - new Date(a.telegramTimestamp).getTime()
+      )
+      const latest = sorted[0]
+      const grouped: Signal = {
+        ...latest,
+        isGroup: true,
+        groupCount: groupList.length,
+        rawText: latest.shortLabel || latest.rawText,
+        hokimRelated: groupList.some(s => s.hokimRelated),
+      }
+      result.push(grouped)
+    }
+  }
+
+  return result.sort(
+    (a, b) => new Date(b.telegramTimestamp).getTime() - new Date(a.telegramTimestamp).getTime()
+  )
+}
+
 function groupSignals(signals: Signal[]): SignalsByCategory {
   const lanes: SignalsByCategory = {
     hokim:       [],
@@ -81,7 +117,8 @@ export function DashboardPage() {
     : filterByTimeRange(rawSignals, filterState.timeRange)
   const mahallaFiltered = filterByMahalla(timeFilteredSignals, filterState.mahallaId)
   const keywordFiltered = filterByKeyword(mahallaFiltered, filterState.searchText)
-  const groupedSignals = groupSignals(keywordFiltered)
+  const collapsedSignals = collapseSignalsIntoGroups(keywordFiltered)
+  const groupedSignals = groupSignals(collapsedSignals)
 
   // isKeywordActive uses the debounced applied filter (searchText), not the immediate visible value
   const isKeywordActive = filterState.searchText.trim().length > 0

@@ -124,22 +124,38 @@ export function SignalCard({ signal, isActive, categoryColor, onClick }: SignalC
         >
           {locationLabel}
         </span>
-        <span
-          style={{
-            fontSize: 11,
-            color: '#94A3B8',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-            flexShrink: 0,
-          }}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-          {clockTime}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          {signal.isGroup && (
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                background: `${categoryColor}1C`,
+                color: categoryColor,
+                padding: '1px 5px',
+                borderRadius: 5,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {signal.groupCount} та сигнал
+            </span>
+          )}
+          <span
+            style={{
+              fontSize: 11,
+              color: '#94A3B8',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            {clockTime}
+          </span>
+        </div>
       </div>
 
       {/* Row 2: raw text (3-line clamp) */}

@@ -66,22 +66,32 @@ const signals: SignalDraft[] = [
   },
 
   // ── Suv (Water) ────────────────────────────────────────────────────────
+  // Group 1: Navbahor MFY (mahallaIndex: 0) - Water (3 signals collapsed)
   {
     updateIdOffset: 5,
     category: 'water', hokimRelated: false,
     senderName: 'Нилуфар Азимова', senderUsername: null,
     text: 'Сув оқими жуда паст, уйимизда 3-қаватга сув умуман кўтарилмаяпти. Муаммони ҳал қилиб беринг.',
     textSource: 'text', mahallaIndex: 0, minsAgo: 5, keyword: 'suv',
-    shortLabel: 'Ичимлик суви босими пастлиги ва таъминот узилиши',
+    shortLabel: 'Ичимлик суви таъминоти қувуридаги авария сабабли сув босими пастлиги ва узилишлар',
   },
   {
     updateIdOffset: 6,
     category: 'water', hokimRelated: false,
     senderName: 'Санжар Бекмуродов', senderUsername: 'sanjar_b',
     text: 'Эрталабдан бери ичимлик суви йўқ. Оғиз суви ҳам келмади. Қачон берилади?',
-    textSource: 'text', mahallaIndex: 1, minsAgo: 15, keyword: 'suv',
-    shortLabel: 'Аҳолини ичимлик суви билан таъминлашдаги узилиш',
+    textSource: 'text', mahallaIndex: 0, minsAgo: 15, keyword: 'suv',
+    shortLabel: 'Ичимлик суви таъминоти қувуридаги авария сабабли сув босими пастлиги ва узилишлар',
   },
+  {
+    updateIdOffset: 8,
+    category: 'water', hokimRelated: false,
+    senderName: 'Умид Нишонов', senderUsername: null,
+    text: 'Бугун сувнинг таъми ўзгарган, ранги ҳам хирароқ. Ичишга қўрқяпмиз, ҳид бор.',
+    textSource: 'text', mahallaIndex: 0, minsAgo: 72, keyword: 'suv',
+    shortLabel: 'Ичимлик суви таъминоти қувуридаги авария сабабли сув босими пастлиги ва узилишлар',
+  },
+  // Single water signal in Bogiston
   {
     updateIdOffset: 7,
     category: 'water', hokimRelated: false,
@@ -90,32 +100,34 @@ const signals: SignalDraft[] = [
     textSource: 'caption', mahallaIndex: 2, minsAgo: 40, keyword: 'suv',
     shortLabel: 'Ичимлик суви қувуридаги йирик авариявий сизиб чиқиш',
   },
-  {
-    updateIdOffset: 8,
-    category: 'water', hokimRelated: false,
-    senderName: 'Умид Нишонов', senderUsername: null,
-    text: 'Бугун сувнинг таъми ўзгарган, ранги ҳам хирароқ. Ичишга қўрқяпмиз, ҳид бор.',
-    textSource: 'text', mahallaIndex: 0, minsAgo: 72, keyword: 'suv',
-    shortLabel: 'Ичимлик суви сифати ва гигиена талабларига мос эмаслиги',
-  },
 
   // ── Elektr (Electricity) ────────────────────────────────────────────────
+  // Group 2: Olmazor MFY (mahallaIndex: 1) - Electricity (3 signals collapsed)
   {
     updateIdOffset: 9,
     category: 'electricity', hokimRelated: false,
     senderName: 'Зулфия Ҳасанова', senderUsername: 'zulfiya_h',
     text: 'Электр токи тез-тез ўчиб қоляпти. Кундузи ҳам, кечаси ҳам. Техникалар куйиб қолишидан хавотирдамиз.',
     textSource: 'text', mahallaIndex: 1, minsAgo: 12, keyword: 'elektr',
-    shortLabel: 'Электр таъминотидаги тез-тез такрорланувчи узилишлар',
+    shortLabel: 'Трансформатордаги кучли учқун ва авариявий ҳолат сабабли кучланиш пастлиги ва электр ўчиши',
   },
   {
     updateIdOffset: 10,
     category: 'electricity', hokimRelated: false,
     senderName: 'Отабек Мирзаев', senderUsername: null,
     text: 'Маҳалламизда кучланиш жуда паст. Кондиционерлар ва музлатгичлар умуман ишламаяпти.',
-    textSource: 'text', mahallaIndex: 2, minsAgo: 32, keyword: 'svet',
-    shortLabel: 'Электр тармоғидаги кучланишнинг меъёрдан пастлиги',
+    textSource: 'text', mahallaIndex: 1, minsAgo: 32, keyword: 'svet',
+    shortLabel: 'Трансформатордаги кучли учқун ва авариявий ҳолат сабабли кучланиш пастлиги ва электр ўчиши',
   },
+  {
+    updateIdOffset: 12,
+    category: 'electricity', hokimRelated: false,
+    senderName: 'Камола Раҳимова', senderUsername: null,
+    text: 'Кечаси соат 22:00 дан кейин узоқ муддатга электр ўчди. Муаммо нимада эканлигини ким билади?',
+    textSource: 'text', mahallaIndex: 1, minsAgo: 140, keyword: 'svet',
+    shortLabel: 'Трансформатордаги кучли учқун ва авариявий ҳолат сабабли кучланиш пастлиги ва электр ўчиши',
+  },
+  // Single electricity signal in Navbahor
   {
     updateIdOffset: 11,
     category: 'electricity', hokimRelated: false,
@@ -124,24 +136,26 @@ const signals: SignalDraft[] = [
     textSource: 'caption', mahallaIndex: 0, minsAgo: 85, keyword: 'elektr',
     shortLabel: 'Трансформатордаги авариявий учқун чиқиш хавфи',
   },
-  {
-    updateIdOffset: 12,
-    category: 'electricity', hokimRelated: false,
-    senderName: 'Камола Раҳимова', senderUsername: null,
-    text: 'Кечаси соат 22:00 дан кейин узоқ муддатга электр ўчди. Муаммо нимада эканлигини ким билади?',
-    textSource: 'text', mahallaIndex: 1, minsAgo: 140, keyword: 'svet',
-    shortLabel: 'Тунги вақтда электр таъминотининг узоқ муддатли ўчиши',
-  },
 
   // ── Gaz (Gas) ───────────────────────────────────────────────────────────
+  // Group 3: Bogiston MFY (mahallaIndex: 2) - Gas (2 signals collapsed)
   {
     updateIdOffset: 13,
     category: 'gas', hokimRelated: false,
     senderName: 'Дилшод Эргашев', senderUsername: 'dilshod_e',
     text: 'Газ босими жуда паст, овқат пишириш умуман имконсиз бўляпти. Иситиш тизими ҳам ишламаяпти.',
     textSource: 'text', mahallaIndex: 2, minsAgo: 9, keyword: 'gaz',
-    shortLabel: 'Табиий газ босими пастлиги ёки таъминот йўқлиги',
+    shortLabel: 'Ҳудудда табиий газ босими жуда пастлиги ва иситиш тизими ишламаётгани',
   },
+  {
+    updateIdOffset: 16,
+    category: 'gas', hokimRelated: false,
+    senderName: 'Муҳаббат Юлдошева', senderUsername: null,
+    text: 'Суюлтирилган газ баллонлари узоқ вақтдан бери маҳаллага олиб келинмади. Таъминот тўхтаб қолган.',
+    textSource: 'text', mahallaIndex: 2, minsAgo: 115, keyword: 'gaz',
+    shortLabel: 'Ҳудудда табиий газ босими жуда пастлиги ва иситиш тизими ишламаётгани',
+  },
+  // Single gas signals in Navbahor and Olmazor
   {
     updateIdOffset: 14,
     category: 'gas', hokimRelated: false,
@@ -157,14 +171,6 @@ const signals: SignalDraft[] = [
     text: 'Газ плита доимий равишда ўчиб қоляпти. Бу авариявий ҳолатми ёки босим пастлигиданми?',
     textSource: 'caption', mahallaIndex: 1, minsAgo: 50, keyword: 'gaz',
     shortLabel: 'Газ таъминоти тизимидаги нобарқарор босим',
-  },
-  {
-    updateIdOffset: 16,
-    category: 'gas', hokimRelated: false,
-    senderName: 'Муҳаббат Юлдошева', senderUsername: null,
-    text: 'Суюлтирилган газ баллонлари узоқ вақтдан бери маҳаллага олиб келинмади. Таъминот тўхтаб қолган.',
-    textSource: 'text', mahallaIndex: 2, minsAgo: 115, keyword: 'gaz',
-    shortLabel: 'Суюлтирилган газ баллонларини етказиб беришдаги кечикиш',
   },
 
   // ── Chiqindi (Waste) ────────────────────────────────────────────────────

@@ -182,4 +182,20 @@ describe('SignalCard', () => {
     expect(card).toBeDefined()
     expect(card!.getAttribute('tabindex')).toBe('0')
   })
+
+  it('renders group count badge when isGroup is true', () => {
+    renderCard({
+      signal: {
+        ...baseSignal,
+        isGroup: true,
+        groupCount: 3,
+      },
+    })
+    expect(screen.getByText('3 та сигнал')).toBeTruthy()
+  })
+
+  it('does NOT render group count badge when isGroup is false or missing', () => {
+    renderCard()
+    expect(screen.queryByText(/та сигнал/)).toBeNull()
+  })
 })
