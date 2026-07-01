@@ -7,6 +7,7 @@ import { prisma } from '../shared/db.js'
 import { logger } from '../shared/logger.js'
 import { isBatchRunning, runClassifyBatchWithLock } from '../classifier/index.js'
 import { simulateWebhook, injectSimulatedMessage } from './simulator.js'
+import { mapSignalRow } from '../signals/mapper.js'
 
 export const opsRouter: IRouter = Router()
 
@@ -472,6 +473,205 @@ opsRouter.delete('/keywords/:id', async (req, res) => {
   }
 })
 
+// ─── GET /api/ops/signals ───────────────────────────────────────────────────
+opsRouter.get('/signals', async (req, res) => {
+  try {
+    const district = await prisma.district.findFirst({ where: { is_active: true } })
+    if (!district) return res.status(503).json({ error: 'No active district' })
+
+    // Parse optional filters (invalid values are silently ignored)
+    const VALID_CATEGORIES = ['water', 'electricity', 'gas', 'waste'] as const
+    const category = VALID_CATEGORIES.includes(req.query['category'] as (typeof VALID_CATEGORIES)[number])
+      ? (req.query['category'] as string)
+      : undefined
+
+    const mahallaIdRaw = Number(req.query['mahalla_id'])
+    const mahallaId = Number.isInteger(mahallaIdRaw) && mahallaIdRaw > 0 ? mahallaIdRaw : undefined
+
+    const hokimRelatedRaw = req.query['hokim_related']
+    const hokimRelated = hokimRelatedRaw === 'true' ? true : hokimRelatedRaw === 'false' ? false : undefined
+
+    const parseDateFilter = (value: unknown): Date | undefined => {
+      if (typeof value !== 'string') return undefined
+      const parsedDate = new Date(value)
+      return Number.isNaN(parsedDate.getTime()) ? undefined : parsedDate
+    }
+    const from = parseDateFilter(req.query['from'])
+    const to   = parseDateFilter(req.query['to'])
+
+    // Pagination
+    const page  = parsePositiveIntegerQueryParam(req.query['page'], 1)
+    const limit = parsePositiveIntegerQueryParam(req.query['limit'], 50, 100)
+    const skip  = (page - 1) * limit
+
+    const where = {
+      district_id:   district.id,
+      ...(category   !== undefined && { category }),
+      ...(mahallaId  !== undefined && { mahalla_id: mahallaId }),
+      ...(hokimRelated !== undefined && { hokim_related: hokimRelated }),
+      ...(from !== undefined || to !== undefined
+        ? { telegram_timestamp: { ...(from && { gte: from }), ...(to && { lte: to }) } }
+        : {}),
+    }
+
+    const [rows, total] = await Promise.all([
+      prisma.signalMessage.findMany({
+        where,
+        include: { mahalla: { select: { name: true, telegram_chat_id: true } } },
+        orderBy: { telegram_timestamp: 'desc' },
+        skip,
+        take:    limit,
+      }),
+      prisma.signalMessage.count({ where }),
+    ])
+
+    return res.json({
+      items: rows.map(mapSignalRow),
+      total,
+    })
+  } catch (err) {
+    logger.error({ err }, 'Ops signals query failed')
+    return res.status(500).json({ statusCode: 500, error: 'Internal Server Error', message: 'Signals query failed' })
+  }
+})
+
+// ─── GET /api/ops/raw-messages ─────────────────────────────────────────────
+opsRouter.get('/raw-messages', async (req, res) => {
+  try {
+    const district = await prisma.district.findFirst({ where: { is_active: true } })
+    if (!district) return res.status(503).json({ error: 'No active district' })
+
+    const page  = parsePositiveIntegerQueryParam(req.query['page'], 1)
+    const limit = parsePositiveIntegerQueryParam(req.query['limit'], 50, 100)
+    const skip  = (page - 1) * limit
+
+    const where = { district_id: district.id }
+
+    const [rows, total] = await Promise.all([
+      prisma.rawMessage.findMany({
+        where,
+        include: { mahalla: { select: { name: true } } },
+        orderBy: { telegram_timestamp: 'desc' },
+        skip,
+        take:    limit,
+      }),
+      prisma.rawMessage.count({ where }),
+    ])
+
+    return res.json({
+      items: rows.map(r => ({
+        id:               r.id,
+        mahallaId:        r.mahalla_id,
+        mahallaName:      r.mahalla.name,
+        text:             r.text,
+        textSource:       r.text_source as 'text' | 'caption',
+        telegramTimestamp: r.telegram_timestamp.toISOString(),
+        isSimulated:      r.telegram_update_id < 0,
+      })),
+      total,
+    })
+  } catch (err) {
+    logger.error({ err }, 'Ops raw-messages query failed')
+    return res.status(500).json({ statusCode: 500, error: 'Internal Server Error', message: 'Raw messages query failed' })
+  }
+})
+
+// ─── DELETE /api/ops/raw-messages/simulated ────────────────────────────────
+// MUST be registered BEFORE DELETE /raw-messages to avoid Express fallthrough
+opsRouter.delete('/raw-messages/simulated', async (_req, res) => {
+  try {
+    const district = await prisma.district.findFirst({ where: { is_active: true } })
+    if (!district) return res.status(503).json({ error: 'No active district' })
+
+    const result = await prisma.rawMessage.deleteMany({
+      where: {
+        district_id:        district.id,
+        telegram_update_id: { lt: 0 },
+      },
+    })
+    return res.json({ deleted: result.count })
+  } catch (err) {
+    logger.error({ err }, 'Ops delete simulated raw-messages failed')
+    return res.status(500).json({ statusCode: 500, error: 'Internal Server Error', message: 'Delete simulated raw messages failed' })
+  }
+})
+
+// ─── DELETE /api/ops/raw-messages ─────────────────────────────────────────
+opsRouter.delete('/raw-messages', async (req, res) => {
+  if (req.query['confirm'] !== 'DELETE_ALL_RAW') {
+    return res.status(400).json({
+      statusCode: 400,
+      error:      'Bad Request',
+      message:    'Missing or wrong confirm param. Pass ?confirm=DELETE_ALL_RAW to proceed.',
+    })
+  }
+  try {
+    const district = await prisma.district.findFirst({ where: { is_active: true } })
+    if (!district) return res.status(503).json({ error: 'No active district' })
+
+    const result = await prisma.rawMessage.deleteMany({
+      where: { district_id: district.id },
+    })
+    return res.json({ deleted: result.count })
+  } catch (err) {
+    logger.error({ err }, 'Ops delete all raw-messages failed')
+    return res.status(500).json({ statusCode: 500, error: 'Internal Server Error', message: 'Delete all raw messages failed' })
+  }
+})
+
+// ─── DELETE /api/ops/signals/simulated ─────────────────────────────────────
+// MUST be registered BEFORE DELETE /signals to avoid Express fallthrough
+opsRouter.delete('/signals/simulated', async (_req, res) => {
+  try {
+    const district = await prisma.district.findFirst({ where: { is_active: true } })
+    if (!district) return res.status(503).json({ error: 'No active district' })
+
+    const result = await prisma.signalMessage.deleteMany({
+      where: {
+        district_id:        district.id,
+        telegram_update_id: { lt: 0 },
+      },
+    })
+    return res.json({ deleted: result.count })
+  } catch (err) {
+    logger.error({ err }, 'Ops delete simulated signals failed')
+    return res.status(500).json({ statusCode: 500, error: 'Internal Server Error', message: 'Delete simulated signals failed' })
+  }
+})
+
+// ─── DELETE /api/ops/signals ────────────────────────────────────────────────
+opsRouter.delete('/signals', async (req, res) => {
+  if (req.query['confirm'] !== 'DELETE_ALL_SIGNALS') {
+    return res.status(400).json({
+      statusCode: 400,
+      error:      'Bad Request',
+      message:    'Missing or wrong confirm param. Pass ?confirm=DELETE_ALL_SIGNALS to proceed.',
+    })
+  }
+  try {
+    const district = await prisma.district.findFirst({ where: { is_active: true } })
+    if (!district) return res.status(503).json({ error: 'No active district' })
+
+    const result = await prisma.signalMessage.deleteMany({
+      where: { district_id: district.id },
+    })
+    return res.json({ deleted: result.count })
+  } catch (err) {
+    logger.error({ err }, 'Ops delete all signals failed')
+    return res.status(500).json({ statusCode: 500, error: 'Internal Server Error', message: 'Delete all signals failed' })
+  }
+})
+
 function isPrismaUniqueConstraintError(err: unknown): boolean {
   return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002'
+}
+
+function parsePositiveIntegerQueryParam(value: unknown, fallback: number, max?: number): number {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return fallback
+
+  const integer = Math.trunc(parsed)
+  if (integer < 1) return fallback
+
+  return max === undefined ? integer : Math.min(integer, max)
 }
