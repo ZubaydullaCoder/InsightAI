@@ -48,6 +48,49 @@ pnpm dev:web
 
 The server runs on `PORT` from `.env` and the web app runs through Vite.
 
+## Telegram + ngrok Demo Test
+
+Current development is a local validation MVP using `FILTER_MODE=keyword_gate`. ngrok is approved only for local demo/testing, not production.
+
+1. Create a Telegram bot with `@BotFather`, then set `BOT_TOKEN` in `.env`.
+2. Create a private test mahalla supergroup and add the bot to it.
+3. Set `.env` for local testing:
+
+```bash
+OPS_ENABLED=true
+OPS_SECRET=<local-ops-secret>
+TELEGRAM_WEBHOOK_SECRET=<random-webhook-secret>
+FILTER_MODE=keyword_gate
+CLASSIFIER_AUTO_TRIGGER_ENABLED=true
+```
+
+4. Prepare data and run the app:
+
+```bash
+pnpm db:generate
+pnpm db:push
+pnpm db:seed
+pnpm dev:server
+pnpm dev:web
+```
+
+5. Expose the server with ngrok:
+
+```bash
+ngrok http 3001
+```
+
+6. Register the Telegram webhook, replacing values as needed:
+
+```bash
+curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook?url=<NGROK_HTTPS_URL>/webhook&secret_token=<TELEGRAM_WEBHOOK_SECRET>"
+```
+
+7. Send keyword-matching test messages in the group, or use the Ops Console simulator at `/ops`.
+8. In Ops Console, check pipeline events, raw messages, simulated signals, and trigger a manual batch if needed.
+
+For real group intake, the group chat ID must match a seeded or configured mahalla `telegram_chat_id`; otherwise the webhook will discard the message as an unknown mahalla.
+
 ## Verification
 
 ```bash
