@@ -98,6 +98,15 @@ export function LaneColumn({ laneKey, signals, activeSignalId, onCardClick, isKe
       className="lane-column"
       role="feed"
       aria-label={laneLabel}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        background: '#FFFFFF',
+        borderRadius: 12,
+        border: '1px solid #E2E8F0',
+        overflow: 'hidden',
+      }}
     >
       {/* Sticky header — icon chip + title + badge (matches reference col-header) */}
       <div
@@ -131,10 +140,25 @@ export function LaneColumn({ laneKey, signals, activeSignalId, onCardClick, isKe
           <CategoryIcon category={laneKey} color={iconColor} />
         </div>
 
-        <span style={{ fontWeight: 600, fontSize: 13, color: token.colorText, flex: 1 }}>
+        <span style={{ fontWeight: 700, fontSize: 13.5, color: '#1E293B', flex: 1 }}>
           {laneLabel}
         </span>
-        <Badge count={signals.length} showZero style={{ backgroundColor: token.colorPrimary }} />
+        
+        {/* Styled category-colored pill count badge */}
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            background: iconBg,
+            color: iconColor,
+            padding: '2px 8px',
+            borderRadius: 12,
+            minWidth: 28,
+            textAlign: 'center',
+          }}
+        >
+          {signals.length}
+        </span>
       </div>
 
       {/* Lane body */}
@@ -142,8 +166,8 @@ export function LaneColumn({ laneKey, signals, activeSignalId, onCardClick, isKe
         ref={parentRef}
         style={{
           flex: 1,
-          // Freeze lane scroll while drawer is open; browser preserves scroll position (AC-8)
-          overflowY: isDrawerOpen ? 'hidden' : 'auto',
+          // Keep lane scroll container always 'auto' to prevent scrollbar vanish/layout shift on click
+          overflowY: 'auto',
           padding: '8px 0',
         }}
       >
@@ -189,6 +213,43 @@ export function LaneColumn({ laneKey, signals, activeSignalId, onCardClick, isKe
             </div>
           ))
         )}
+      </div>
+
+      {/* Footer link matching reference exactly */}
+      <div
+        style={{
+          padding: '10px 14px',
+          borderTop: `1px solid ${token.colorBorder}`,
+          background: '#FFFFFF',
+          textAlign: 'center',
+          borderRadius: '0 0 12px 12px',
+        }}
+      >
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault()
+          }}
+          style={{
+            fontSize: 12,
+            fontWeight: 700,
+            color: '#2563EB',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            transition: 'color 150ms',
+            textDecoration: 'none',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#1D4ED8')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '#2563EB')}
+        >
+          Барча сигналларни кўриш
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12" />
+            <polyline points="12 5 19 12 12 19" />
+          </svg>
+        </a>
       </div>
     </div>
   )

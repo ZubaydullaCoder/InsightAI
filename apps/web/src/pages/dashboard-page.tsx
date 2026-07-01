@@ -13,6 +13,7 @@ import { useDashboardSearchState } from '../hooks/use-dashboard-search-state.ts'
 import { filterByTimeRange, filterByMahalla, filterByKeyword } from '../utils/filter-utils.ts'
 import { strings } from '../strings.ts'
 import { ContextDrawer } from '../components/context-drawer/context-drawer.tsx'
+import { StatsBar } from '../components/stats-bar/stats-bar.tsx'
 
 // Lane label order for loading skeleton — matches LANE_ORDER in LaneGrid
 const SKELETON_LANE_LABELS = [
@@ -143,6 +144,9 @@ export function DashboardPage() {
             {isDelayed && (
               <DelayBanner lastBatchAt={healthData?.lastBatchAt ?? null} />
             )}
+            <div style={{ marginTop: 12 }}>
+              <StatsBar signals={keywordFiltered} />
+            </div>
             <div style={{ flex: 1, minHeight: 0 }}>
               <LaneGrid
                 signals={groupedSignals}

@@ -25,40 +25,37 @@ function renderChips(
 
 describe('TimeRangeChips', () => {
   describe('labels render', () => {
-    it('renders all 6 Uzbek Cyrillic chip labels', () => {
+    it('renders all 3 Uzbek Cyrillic chip labels', () => {
       renderChips()
-      expect(screen.getByRole('button', { name: '1 соат' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: '3 соат' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: '6 соат' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Бугун' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Кеча' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '24 соат' })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: '7 кун' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: '30 кун' })).toBeInTheDocument()
     })
 
-    it('renders exactly 6 chip buttons', () => {
+    it('renders exactly 3 chip buttons', () => {
       renderChips()
       const buttons = screen.getAllByRole('button')
-      expect(buttons).toHaveLength(6)
+      expect(buttons).toHaveLength(3)
     })
   })
 
   describe('active chip styling', () => {
     it('active chip has aria-pressed=true', () => {
       renderChips('today')
-      const activeButton = screen.getByRole('button', { name: 'Бугун' })
+      const activeButton = screen.getByRole('button', { name: '24 соат' })
       expect(activeButton).toHaveAttribute('aria-pressed', 'true')
     })
 
     it('non-active chips have aria-pressed=false', () => {
       renderChips('today')
-      const inactiveButton = screen.getByRole('button', { name: '1 соат' })
+      const inactiveButton = screen.getByRole('button', { name: '7 кун' })
       expect(inactiveButton).toHaveAttribute('aria-pressed', 'false')
     })
 
     it('switches active styling when a different preset is active', () => {
-      renderChips('1h')
-      const activeButton = screen.getByRole('button', { name: '1 соат' })
-      const inactiveButton = screen.getByRole('button', { name: 'Бугун' })
+      renderChips('7d')
+      const activeButton = screen.getByRole('button', { name: '7 кун' })
+      const inactiveButton = screen.getByRole('button', { name: '24 соат' })
       expect(activeButton).toHaveAttribute('aria-pressed', 'true')
       expect(inactiveButton).toHaveAttribute('aria-pressed', 'false')
     })
@@ -69,25 +66,25 @@ describe('TimeRangeChips', () => {
       const onSelect = vi.fn()
       renderChips('today', onSelect)
 
-      await userEvent.click(screen.getByRole('button', { name: '1 соат' }))
+      await userEvent.click(screen.getByRole('button', { name: '7 кун' }))
       expect(onSelect).toHaveBeenCalledTimes(1)
-      expect(onSelect).toHaveBeenCalledWith('1h')
+      expect(onSelect).toHaveBeenCalledWith('7d')
     })
 
-    it('calls onSelect with "yesterday" when Кеча chip is clicked', async () => {
+    it('calls onSelect with "yesterday" when 30 кун chip is clicked', async () => {
       const onSelect = vi.fn()
       renderChips('today', onSelect)
 
-      await userEvent.click(screen.getByRole('button', { name: 'Кеча' }))
+      await userEvent.click(screen.getByRole('button', { name: '30 кун' }))
       expect(onSelect).toHaveBeenCalledWith('yesterday')
     })
 
-    it('calls onSelect with "7d" when 7 кун chip is clicked', async () => {
+    it('calls onSelect with "today" when 24 соат chip is clicked', async () => {
       const onSelect = vi.fn()
-      renderChips('today', onSelect)
+      renderChips('7d', onSelect)
 
-      await userEvent.click(screen.getByRole('button', { name: '7 кун' }))
-      expect(onSelect).toHaveBeenCalledWith('7d')
+      await userEvent.click(screen.getByRole('button', { name: '24 соат' }))
+      expect(onSelect).toHaveBeenCalledWith('today')
     })
   })
 

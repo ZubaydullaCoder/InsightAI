@@ -44,7 +44,7 @@ export const strings = {
   },
   dashboard: {
     lanes: {
-      hokim:       'Ҳокимга тегишли',
+      hokim:       'Бошқалар',
       water:       'Сув',
       electricity: 'Электр',
       gas:         'Газ',
@@ -64,12 +64,12 @@ export const strings = {
     preset1h:        '1 соат',
     preset3h:        '3 соат',
     preset6h:        '6 соат',
-    presetToday:     'Бугун',
-    presetYesterday: 'Кеча',
+    presetToday:     '24 соат',
+    presetYesterday: '30 кун',
     preset7d:        '7 кун',
     timeRangeGroupLabel: 'Вақт оралиғи',
     allMahallas:     'Барча маҳаллалар',
-    searchPlaceholder: 'Қидириш...',
+    searchPlaceholder: 'Сигналлар бўйича қидирув',
   },
   drawer: {
     onlyAnchorMessage: 'Бу маҳаллада бошқа сигналлар топилмади',

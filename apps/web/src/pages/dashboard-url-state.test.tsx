@@ -101,8 +101,8 @@ describe('DashboardPage URL state', () => {
 
     renderDashboard('/?range=yesterday&q=%D1%81%D1%83%D0%B2')
 
-    expect(screen.getByRole('button', { name: 'Кеча' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByPlaceholderText('Қидириш...')).toHaveValue('сув')
+    expect(screen.getByRole('button', { name: '30 кун' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByPlaceholderText('Сигналлар бўйича қидирув')).toHaveValue('сув')
     expect(mockUseSignals).toHaveBeenLastCalledWith(expect.objectContaining({
       from: expect.any(String),
       to:   expect.any(String),
@@ -114,7 +114,7 @@ describe('DashboardPage URL state', () => {
 
     renderDashboard('/?range=tomorrow&mahalla=abc')
 
-    expect(screen.getByRole('button', { name: 'Бугун' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: '24 соат' })).toHaveAttribute('aria-pressed', 'true')
     expect(mockUseSignals).toHaveBeenLastCalledWith(undefined)
   })
 
