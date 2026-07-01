@@ -164,6 +164,7 @@ export function ContextDrawer({
                 signal={signal}
                 isActive={signal.id === anchorSignal?.id}
                 categoryColor={CATEGORY_COLORS[signal.category]}
+                anchorId={anchorSignal?.id ?? undefined}
               />
             </div>
           ))}
