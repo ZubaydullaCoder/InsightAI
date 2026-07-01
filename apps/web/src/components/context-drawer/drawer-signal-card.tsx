@@ -137,12 +137,18 @@ export function DrawerSignalCard({ signal, isActive, categoryColor }: DrawerSign
 
       {/* Message content */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Row 1: location + clock time */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
-          <span style={{ fontSize: 11.5, fontWeight: 500, color: '#64748B', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: 6 }}>
-            {locationLabel}
-          </span>
-          <span style={{ fontSize: 11, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+        {/* Row 1: location column + clock time */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+          {/* Location Column */}
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, marginRight: 6 }}>
+            <span style={{ fontSize: 10.5, fontWeight: 500, color: '#94A3B8', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {districtName}
+            </span>
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#475569', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
+              {mahallaLabel}
+            </span>
+          </div>
+          <span style={{ fontSize: 11, color: '#94A3B8', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, marginTop: 2 }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" />
               <polyline points="12 6 12 12 16 14" />
